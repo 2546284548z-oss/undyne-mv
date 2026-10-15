@@ -1,9 +1,11 @@
 // Bars 12 - 27, the band kicks in: the green soul's shield game. Spears land on
 // the off-beat claps and the riff's accents; their side follows the melody
 // (rising notes come from above, falling from below, level ones alternate left
-// and right); the strongest accents send yellow spears that swing round and
-// land from behind. 20 - 27 tighten in: denser, closer camera, a slow roll.
-// Bar 27 is the first turn: FIGHT, the slash, and she laughs it off.
+// and right); the strongest accents hit heavy or send yellow spears that swing
+// round and land from behind. The camera snaps on the downbeats, she lunges at
+// the soul, spear flurries close the phrases, giant spears tear across the
+// background. 20 - 26: she dashes from side to side as she throws. Bar 27 is the
+// first turn: FIGHT, the slash - and she roars it off.
 (function () {
   const MV = window.MV, U = MV.U, D = MV.D, T = MV.T, TL = MV.TL, H = MV.H, L = MV.LAYOUT;
   const at = T.at;
@@ -31,7 +33,7 @@
       else side = prev.side === 'l' ? 'r' : prev.side === 'r' ? 'l' : U.hash(b * 16 + s) < 0.5 ? 'l' : 'r';
       const strong = H.acc(b, 0, s, 'tone') > 0.8 || H.acc(b, 0, s, 'snare') > 0.85;
       const yel = o.yel && strong && U.hash(b * 31.7 + s * 3.1) < o.yel && s - prev.s16 > 2;
-      H.green(t, side, { kind: yel ? 'yel' : 'blue', travel: o.travel || 0.62, dist: o.dist, hitVol: o.vol });
+      H.green(t, side, { kind: yel ? 'yel' : 'blue', travel: o.travel, dist: o.dist, hitVol: o.vol, heavy: strong && o.heavy !== false });
       out.push({ t, side });
       prev = { side: yel ? { u: 'd', d: 'u', l: 'r', r: 'l' }[side] : side, pitch: p > 0 ? p : prev.pitch, t, s16: s };
       if (o.squash !== false) TL.soul.to(t, t + 0.02, { sq: 0.8 }, 'lin').to(t + 0.02, t + 0.15, { sq: 1 }, 'out');
@@ -41,45 +43,67 @@
   };
   H.resetGreen = (side = 'u') => { prev = { side, pitch: 75, t: -1, s16: -9 }; };
 
+  H.snap = (t, v) => H.cam(t - 0.02, t + 0.12, v, 'outExpo');
+
   MV.sections.push(() => {
     H.resetGreen('l');
+    // ------------------------------------------------------------ 12: she lands
+    H.barrage(at(12), 4);
+    H.speed(at(12), at(12, 2), { k: 0.9 });
+    H.snap(at(12), { x: 480, y: 236, zoom: 1.34, roll: 0 });
+    TL.shadow.to(at(12), at(12, 2), { a: 0.72 }, 'out');
+    TL.rage.to(at(12), at(12, 1), { v: 0.9 }, 'out');
+    TL.rumble.to(at(12, 1), at(13), { v: 1.4 }, 'out');
+    TL.post.to(at(12), at(12, 1), { bloom: 1.15, ca: 0.9, vig: 0.45 }, 'out');
+    TL.bg.to(at(12), at(13), { cav: 0.85, drift: 24 }, 'inOut');
+
     // ------------------------------------------------------------ 12 - 19
-    H.punch(at(12), 1.2);
-    H.cam(at(12), at(12, 2), { x: 480, y: 238, zoom: 1.25, roll: 0 }, 'outExpo');
-    TL.post.to(at(12), at(12, 1), { bloom: 1.1, ca: 0.7 }, 'out');
-    TL.bg.to(at(12), at(13), { cav: 0.85, drift: 14 }, 'inOut');
+    const flur12 = { 15: 'l', 17: 'r', 19: 'u' };
     for (let b = 12; b < 20; b++) {
-      H.greenBar(b, { tone: 0.8, snare: 0.5, gap: 2, yel: b >= 14 ? 0.35 : 0, travel: 0.64 });
-      H.cam(at(b), at(b + 1), { roll: (b % 2 ? -1 : 1) * 0.022 }, 'inOut');
-      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.3);
+      const f = flur12[b];
+      H.greenBar(b, { tone: 0.8, snare: 0.5, gap: 2, yel: b >= 14 ? 0.35 : 0, to: f ? 12 : 16 });
+      if (f) H.flurry(at(b, 3), f, 4);
+      if (b % 2 === 0 && b > 12) {
+        H.snap(at(b), { zoom: b % 4 ? 1.46 : 1.32, x: b % 4 ? 492 : 468, roll: b % 4 ? -0.05 : 0.045 });
+        H.lunge(at(b), 0.55);
+      }
+      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.45);
+      if (b % 4 === 0) H.barrage(at(b, 2), 2, { vol: 0.25 });
     }
-    H.say(at(13), at(15), ['就这点本事吗？'], { cps: 12 });
+    H.say(at(13), at(15), ['就这点本事吗？'], { cps: 14 });
     H.face(at(13), 9); H.face(at(15), 0);
     H.face(at(17), 1); H.face(at(17, 2), 0);
 
-    // ------------------------------------------------------------ 20 - 26: closer, denser
-    H.cam(at(19, 3), at(20, 1), { x: 480, y: 232, zoom: 1.45 }, 'inOut');
-    TL.post.to(at(20), at(20, 2), { bloom: 1.2, vig: 0.42 }, 'out');
-    TL.und.to(at(20), at(21), { ghost: 0.5 }, 'inOut');
+    // ------------------------------------------------------------ 20 - 26: she dashes as she throws
+    TL.shadow.to(at(20), at(21), { a: 0.85 }, 'inOut');
+    TL.rage.to(at(20), at(21), { v: 1.15 }, 'inOut');
+    TL.rumble.to(at(20), at(21), { v: 2.2 }, 'inOut');
+    TL.post.to(at(20), at(20, 2), { bloom: 1.25, vig: 0.48, ca: 1.1 }, 'out');
+    TL.bg.to(at(20), at(21), { drift: 40 }, 'inOut');
+    TL.und.to(at(20), at(20, 1), { ghost: 0.5 }, 'inOut');
+    H.speed(at(20), at(27), { k: 0.3 });
+    const xs = { 20: 372, 21: 590, 22: 400, 23: 566, 24: 360, 25: 600, 26: 480 };
+    const flur20 = { 22: 'd', 24: 'l', 26: 'r' };
     for (let b = 20; b < 27; b++) {
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.85, gap: 2, yel: 0.45, travel: 0.56 });
-      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.4);
+      const f = flur20[b];
+      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.85, gap: 2, yel: 0.45, to: f ? 12 : 16 });
+      if (f) H.flurry(at(b, 3), f, 4);
+      H.dash(at(b) - 0.12, at(b) + 0.08, xs[b]);
+      H.snap(at(b), { zoom: b % 2 ? 1.5 : 1.4, x: 480 + (xs[b] - 480) * 0.25, roll: (b % 2 ? -1 : 1) * 0.09 });
+      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.55);
+      if (b % 2 === 0) H.barrage(at(b, 1, 2), 2, { vol: 0.22 });
     }
-    H.cam(at(20), at(22), { roll: 0.07 }, 'inOut');
-    H.cam(at(22), at(24), { roll: -0.07 }, 'inOut');
-    H.cam(at(24), at(26), { roll: 0.05, zoom: 1.52 }, 'inOut');
-    H.cam(at(26), at(26, 3), { roll: 0, zoom: 1.45 }, 'inOut');
-    H.say(at(21), at(23, 2), ['这一击……', '是为了大家！'], { cps: 12 });
+    H.say(at(21), at(23, 2), ['这一击……', '是为了大家！'], { cps: 14 });
     H.face(at(21), 6); H.face(at(23, 2), 0);
     H.face(at(25), 2); H.face(at(25, 2), 0);
 
     // ------------------------------------------------------------ 27: the first turn
     TL.shield.to(at(27), at(27, 0, 2), { a: 0 }, 'out');
     TL.und.to(at(26, 3), at(27), { ghost: 0 }, 'inOut');
-    H.cam(at(27), at(27, 1), { x: 480, y: 262, zoom: 1.1, roll: 0 }, 'inOut');
-    H.turn(at(27), at(27, 1), 2475, 1, 0.86, { after: 1, hurt: 0.4 });
-    H.say(at(27, 2), at(28, 2), ['哈哈哈！', '就这样？'], { cps: 14 });
-    H.face(at(28, 2), 0);
+    TL.rumble.to(at(27), at(27, 1), { v: 0.5 }, 'out');
+    H.cam(at(27), at(27, 1), { x: 480, y: 258, zoom: 1.12, roll: 0 }, 'inOut');
+    H.turn(at(27), at(27, 1), 2475, 1, 0.86, { after: 14, hurt: 0.1, show: 0.48 });
+    H.roar(at(27, 3), '就这样？！', { len: 1.0, head: 12, after: 0, rest: 1.4 });
     H.swell(at(28), 0.45);
   });
 })();

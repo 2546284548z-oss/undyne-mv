@@ -1,10 +1,12 @@
 // Bars 28 - 59, the main theme twice.
 // 28 - 43, the soul turns red and the box opens wide: now it has to move.
-//   28 - 31  spears stab out of the floor and the ceiling on the melody; the soul
-//            hops between the top and bottom bands, one band a bar
-//   32 - 35  spear rain: the soul sweeps the box, the spears fall beside it
-//   36 - 39  rings: eight spears close round the soul, it slips out through a gap
-//   40 - 43  her eye beams alternate rows on the beat, then everything at once
+//   28 - 31  a fence of spears erupts from the floor or the ceiling on every beat,
+//            one gap in it; the soul dashes to the gap each time. She leaps from
+//            corner to corner above the box, slamming down on the downbeats
+//   32 - 35  spear rain, two spears a hit: the soul sweeps the box between them
+//   36 - 39  rings: twelve spears close round the soul, it slips out through a gap
+//   40 - 43  her eye beams alternate rows on the beat (the screen flashes red),
+//            then everything at once; the cut-in
 // 44 - 59, green again for the repeat: the camera tilts the arena into 3D, her
 //   spear swings flare behind her on the downbeats, 52 - 55 the world turns a
 //   quarter each bar. Bar 59 is the second turn: the slash connects, she cracks.
@@ -51,19 +53,22 @@
   // rain: the soul sweeps x0 -> x1 (bars b..b+1) along the bottom; spears fall beside it
   H.rain = (b, x0, x1, o = {}) => {
     const y = o.y ?? BOT - 40;
-    H.soulTo(at(b) - 0.2, at(b), x0, y, 'outExpo');
+    H.soulTo(at(b) - 0.12, at(b) - 0.02, x0, y, 'outExpo');
     H.soulTo(at(b), at(b + 2) - 0.1, x1, y, 'inOut');
     const offs = [-120, 130, -150, 110, -105, 160, -135, 125];
     let k = 0;
     for (const bb of [b, b + 1]) {
-      for (const s of melody(bb, 2, 15)) {
+      for (const s of melody(bb, 2, bb === b + 1 ? 11 : 15)) {
         const tHit = at(bb, 0, s);
         const sx = TL.soul.at(tHit).x;
-        let x = sx + offs[k++ % offs.length];
-        if (x < 270 || x > 690) x = sx - Math.sign(x - sx) * Math.abs(offs[k % offs.length]);
-        x = U.clamp(x, 270, 690);
-        const yA = TOP - 70, yB = BOT + 80, f = (y - yA) / (yB - yA), dur = 0.42;
-        H.flyer(tHit - dur * f, tHit - dur * f + dur, x, yA, x, yB, { len: 70, clip: true, sfx: s % 4 === 0, vol: 0.1 });
+        const o1 = offs[k++ % offs.length], o2 = -Math.sign(o1) * (Math.abs(offs[k % offs.length]) + 40);
+        for (const off of o.double === false ? [o1] : [o1, o2]) {
+          let x = sx + off;
+          if (x < 268 || x > 692) continue;
+          const yA = TOP - 70, yB = BOT + 80, f = (y - yA) / (yB - yA), dur = 0.36;
+          H.flyer(tHit - dur * f, tHit - dur * f + dur, x, yA, x, yB, { len: 80, clip: true, sfx: s % 4 === 0, vol: 0.14 });
+        }
+        H.punch(tHit, 0.35);
       }
     }
   };
@@ -71,7 +76,9 @@
   H.ringAt = (b, dir, o = {}) => {
     const p = TL.soul.at(at(b) - 0.01);
     const t0 = at(b, o.k0 ?? 0), tHit = at(b, o.k1 ?? 2);
-    H.ring(t0, tHit, p.x, p.y, 8, o.r ?? 62, { a0: Math.PI / 8 });
+    const n = o.n ?? 12;
+    H.ring(t0, tHit, p.x, p.y, n, o.r ?? 64, { a0: Math.PI / n });
+    H.punch(tHit, 1.1);
     H.soulTo(tHit - 0.3, tHit - 0.16, p.x + dir * 90, p.y, 'outExpo');
     H.throwArm(t0 - 0.05, 1);
     return [p.x + dir * 90, p.y];
@@ -90,8 +97,9 @@
       const x = o.x ?? TL.soul.at(tF - 0.4).x;
       H.soulTo(tF - 0.17, tF - 0.07, x, safe, 'outExpo');
       H.beam(tF - 0.3, tF, tF + 0.2, row);
-      TL.und.to(tF - 0.3, tF - 0.28, { eye: 1.8 }, 'lin').to(tF, tF + 0.25, { eye: 0.6 }, 'out');
-      H.punch(tF, 0.6);
+      TL.und.to(tF - 0.3, tF - 0.28, { eye: 2 }, 'lin').to(tF, tF + 0.25, { eye: 0.7 }, 'out');
+      H.punch(tF, 0.9);
+      TL.impact(tF, { amp: 0, flash: 0.22, flashCol: [1, 0.15, 0.2], dur: 0.25 });
     });
   };
   // switch the arena: green post -> red box, and back
@@ -126,86 +134,143 @@
     });
   };
 
-  MV.sections.push(() => {
-    // ------------------------------------------------------------ 28 - 31: floor and ceiling
-    H.toRed(at(28));
-    TL.post.to(at(28), at(28, 1), { bloom: 1.05, vig: 0.4 }, 'out');
-    H.bands(28, ['top', 'bot', 'top', 'bot']);
-    H.say(at(29, 2), at(31), ['给我动起来！'], { cps: 12 });
-    H.face(at(29, 2), 9); H.face(at(31), 0);
-    for (let b = 28; b < 32; b++) for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.3);
+  // a bar of fences on the given beats, gaps at gx[i], sides alternating from `first`
+  H.fenceBar = (b, beats, gx, first = 'b') => {
+    beats.forEach((k, i) => {
+      const tHit = at(b, k), side = (i % 2 === 0) === (first === 'b') ? 'b' : 't';
+      const prevEnd = TL.soul.at(tHit - 0.45);
+      const t0 = i === 0 ? tHit - 0.12 : at(b, beats[i - 1]) + 0.29;
+      H.soulTo(t0, t0 + 0.07, gx[i], MID, 'outExpo');
+      H.fence(tHit - 0.3, tHit, side, gx[i]);
+    });
+  };
+  // gap positions from the melody, at least 90 px apart
+  const gaps = (b, beats) => {
+    let last = TL.soul.at(at(b) - 0.3).x;
+    return beats.map((k) => {
+      const p = H.lead(b, k, 0);
+      let x = pitchX(p > 0 ? p : 75);
+      if (Math.abs(x - last) < 90) x = last + (last > 480 ? -150 : 150);
+      x = U.clamp(Math.round(x), 300, 660);
+      last = x;
+      return x;
+    });
+  };
+  H.gaps = gaps;
 
-    // ------------------------------------------------------------ 32 - 35: rain
+  MV.sections.push(() => {
+    const UY = L.und[1];
+    // ------------------------------------------------------------ 28 - 31: fences
+    H.toRed(at(28), { camY: 244, zoom: 1.12 });
+    H.bigHit(at(28), { flash: 0.3, flashCol: [1, 0.2, 0.2] });
+    H.barrage(at(28), 3);
+    TL.post.to(at(28), at(28, 1), { bloom: 1.15, vig: 0.45, ca: 1 }, 'out');
+    TL.rumble.to(at(28), at(28, 1), { v: 1.6 }, 'out');
+    TL.shadow.to(at(28), at(29), { a: 0.7 }, 'inOut');
+    for (let b = 28; b < 32; b++) {
+      const beats = b === 28 ? [1, 2, 3] : [0, 1, 2, 3]; // 28: the box opens first
+      H.fenceBar(b, beats, gaps(b, beats), b % 2 ? 't' : 'b');
+      // she leaps corner to corner, landing on the next downbeat
+      if (b < 31) H.leap(at(b, 2), at(b + 1), b % 2 ? 620 : 340, 200, { fx: { flash: 0.12, amp: 8 }, rest: 1.6 });
+      H.throwArm(at(b, 1), 0.9);
+    }
+    H.say(at(29, 2), at(31), ['给我动起来！'], { cps: 14 });
+    H.face(at(29, 2), 9); H.face(at(31), 0);
+    H.leap(at(31, 2), at(32), 480, 160, { fx: { flash: 0.15, amp: 9 }, rest: 1.6 });
+
+    // ------------------------------------------------------------ 32 - 35: rain, two spears a hit
     H.rain(32, 300, 660);
     H.rain(34, 660, 300);
-    for (const b of [32, 33, 34, 35]) H.throwArm(at(b) - 0.25, 0.6);
-    H.cam(at(32), at(34), { roll: 0.03 }, 'inOut');
-    H.cam(at(34), at(36), { roll: -0.03 }, 'inOut');
+    H.dash(at(32) + 0.02, at(32, 1), 600); H.dash(at(33), at(33, 0, 2), 360);
+    H.dash(at(34), at(34, 0, 2), 380); H.dash(at(35), at(35, 0, 2), 590);
+    for (const b of [32, 33, 34, 35]) { H.throwArm(at(b, 0, 2), 0.8); H.throwArm(at(b, 2, 2), 0.8); }
+    H.cam(at(32), at(34), { roll: 0.05 }, 'inOut');
+    H.cam(at(34), at(36), { roll: -0.05 }, 'inOut');
+    H.barrage(at(34), 2, { vol: 0.22 });
 
     // ------------------------------------------------------------ 36 - 39: rings + sweeps
     H.soulTo(at(36) - 0.3, at(36) - 0.1, 480, MID, 'outExpo');
-    H.cam(at(35, 3), at(36), { roll: 0, zoom: 1.12, y: 262 }, 'inOut');
+    H.dash(at(35, 3), at(36), 480);
+    H.cam(at(35, 3), at(36), { roll: 0, zoom: 1.16, y: 258 }, 'inOut');
     const dirs = [1, -1, -1, 1];
     for (let i = 0; i < 4; i++) {
       const b = 36 + i;
       const [x, y] = H.ringAt(b, dirs[i]);
-      // after the ring: two sweeps on the rows either side of the soul
+      H.lunge(at(b), 0.5);
       H.sweep(at(b, 3), y - 46, i % 2 ? 1 : -1);
       H.sweep(at(b, 3, 2), y + 46, i % 2 ? -1 : 1);
-      H.punch(at(b, 2), 0.9);
+      H.snap(at(b, 2), { zoom: i % 2 ? 1.22 : 1.12, roll: (i % 2 ? -1 : 1) * 0.04 });
     }
-    H.say(at(37, 3), at(39, 2), ['再快一点！'], { cps: 12 });
+    H.say(at(37, 3), at(39, 2), ['再快一点！'], { cps: 14 });
     H.face(at(37, 3), 1); H.face(at(39, 2), 0);
 
     // ------------------------------------------------------------ 40 - 43: eye beams, then everything
-    TL.und.to(at(39, 3), at(40), { eye: 0.9 }, 'inOut');
+    TL.und.to(at(39, 3), at(40), { eye: 1 }, 'inOut');
+    TL.shadow.to(at(40), at(40, 2), { a: 0.9, eye: 2 }, 'inOut');
     H.beams(40, [1, 2, 3], { x: 480 });
     H.beams(41, [0, 1, 2, 3], { x: 480 });
     for (const x of [300, 660]) for (const k of [0, 2]) H.wallSpear(at(41, k) - 0.3, at(41, k), k ? 't' : 'b', x, { len: 80, vol: 0.25 });
-    H.cam(at(40), at(42), { zoom: 1.16, y: 252 }, 'inOut');
-    // 42: a ring, then rain to the right; 43: sweeps both rows round the centre
+    H.cam(at(40), at(42), { zoom: 1.2, y: 250 }, 'inOut');
     H.soulTo(at(42) - 0.3, at(42) - 0.15, 480, MID, 'outExpo');
     H.ringAt(42, -1, { k0: 0, k1: 1 });
     H.soulTo(at(42, 1, 2), at(43, 2), 600, BOT - 40, 'inOut');
-    for (const s of [6, 8, 10, 12, 14]) { const t = at(42, 0, s), sx = TL.soul.at(t).x; H.flyer(t - 0.3, t + 0.12, sx - 130, TOP - 70, sx - 130, BOT + 80, { len: 70, clip: true, sfx: false }); H.flyer(t - 0.3, t + 0.12, U.clamp(sx + 140, 270, 690), TOP - 70, U.clamp(sx + 140, 270, 690), BOT + 80, { len: 70, clip: true, sfx: false }); }
+    for (const s of [6, 8, 10, 12, 14]) { const t = at(42, 0, s), sx = TL.soul.at(t).x; H.flyer(t - 0.3, t + 0.12, sx - 130, TOP - 70, sx - 130, BOT + 80, { len: 80, clip: true, sfx: false }); H.flyer(t - 0.3, t + 0.12, U.clamp(sx + 140, 270, 690), TOP - 70, U.clamp(sx + 140, 270, 690), BOT + 80, { len: 80, clip: true, sfx: false }); H.punch(t, 0.4); }
     for (const k of [0, 1]) { H.sweep(at(43, k), TOP + 26, k ? 1 : -1, { warn: 0.2 }); H.sweep(at(43, k, 2), MID - 6, k ? -1 : 1, { warn: 0.2 }); }
-    TL.und.to(at(43, 2), at(44), { eye: 0.4 }, 'inOut');
+    TL.und.to(at(43, 2), at(44), { eye: 0.6 }, 'inOut');
+    TL.shadow.to(at(43), at(44), { eye: 1 }, 'inOut');
+    H.say(at(42, 2), at(43, 2), ['不会让你过去的！'], { cps: 16 });
+    H.face(at(42, 2), 2);
+    H.cutin(at(43, 2, 1), 0.72, { text: '这才刚刚开始！！', head: 11 });
+    H.face(at(44), 0);
     H.swell(at(44), 0.5);
-    H.say(at(42, 2), at(44), ['不会让你过去的！'], { cps: 14 });
-    H.face(at(42, 2), 2); H.face(at(44), 0);
 
     // ------------------------------------------------------------ 44 - 58: green, in 3D
     H.toGreen(at(44));
     H.resetGreen('u');
-    H.hit(at(44), 1);
-    H.cam(at(44) - 0.3, at(44, 2), { x: 480, y: 250, zoom: 1.32, pitch: 0.32, yaw: 0, roll: 0 }, 'inOut');
-    TL.post.to(at(44), at(44, 2), { bloom: 1.2, ca: 0.8, bg: 0.25 }, 'inOut');
-    TL.und.to(at(44), at(45), { ghost: 0.45 }, 'inOut');
+    H.bigHit(at(44), { flash: 0.5 });
+    H.barrage(at(44), 5);
+    H.shock(at(44), L.soul[0], L.soul[1], { r: 360, dust: false });
+    H.speed(at(44), at(44, 2), { k: 1 });
+    H.cam(at(44) - 0.3, at(44, 2), { x: 480, y: 250, zoom: 1.36, pitch: 0.32, yaw: 0, roll: 0 }, 'inOut');
+    TL.post.to(at(44), at(44, 2), { bloom: 1.25, ca: 1, bg: 0.25 }, 'inOut');
+    TL.und.to(at(44), at(45), { ghost: 0.5 }, 'inOut');
+    TL.rage.to(at(44), at(45), { v: 1.25 }, 'inOut');
+    TL.rumble.to(at(44), at(45), { v: 2.2 }, 'inOut');
+    TL.shadow.to(at(44), at(45), { a: 0.85 }, 'inOut');
+    const flur44 = { 47: 'l', 49: 'd', 51: 'r', 55: 'u', 57: 'l' };
     for (let b = 44; b < 59; b++) {
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: b >= 52 ? 0.85 : 0, gap: 2, yel: 0.4, travel: b >= 52 ? 0.52 : 0.58 });
-      if (b % 2 === 0) H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2);
-      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.35);
+      const f = flur44[b];
+      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: b >= 52 ? 0.85 : 0, gap: 2, yel: 0.4, travel: b >= 52 ? 0.42 : 0.46, from: b === 44 ? 2 : 0, to: f ? 12 : 16 });
+      if (f) H.flurry(at(b, 3), f, 4);
+      if (b % 2 === 0) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 0, 2), 2, { vol: 0.2 }); }
+      if (b % 2 === 1 && b < 52) H.lunge(at(b), 0.5);
+      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.5);
     }
     // the arena sways on the 2-bar phrases
-    for (let b = 44; b < 52; b += 2) H.cam(at(b), at(b + 2), { yaw: (b / 2) % 2 ? -0.16 : 0.16 }, 'inOut');
+    for (let b = 44; b < 52; b += 2) H.cam(at(b), at(b + 2), { yaw: (b / 2) % 2 ? -0.18 : 0.18 }, 'inOut');
     // 52 - 55: the world turns a quarter each bar
     for (let i = 0; i < 4; i++) H.cam(at(52 + i) - 0.12, at(52 + i) + 0.18, { roll: (i + 1) * Math.PI / 2, yaw: 0, pitch: 0.2 }, 'outExpo');
     H.cut(at(56) - 0.001, { roll: 0 });
-    for (let i = 0; i < 4; i++) H.punch(at(52 + i), 1);
-    H.say(at(48), at(50), ['大家的希望……', '都在我身上！'], { cps: 12 });
+    for (let i = 0; i < 4; i++) { H.hit(at(52 + i), 0.7); H.dash(at(52 + i) - 0.1, at(52 + i) + 0.08, [380, 580, 400, 480][i]); }
+    H.speed(at(52), at(56), { k: 0.45 });
+    H.say(at(48), at(50), ['大家的希望……', '都在我身上！'], { cps: 14 });
     H.face(at(48), 6); H.face(at(50), 0);
     // 56 - 58: the peak - closer, hotter
-    H.cam(at(56), at(56, 2), { zoom: 1.5, pitch: 0.18, y: 240 }, 'inOut');
-    TL.post.to(at(56), at(58), { bloom: 1.35, ca: 1.1 }, 'inOut');
+    H.cam(at(56), at(56, 2), { zoom: 1.52, pitch: 0.18, y: 240 }, 'inOut');
+    TL.post.to(at(56), at(58), { bloom: 1.4, ca: 1.4 }, 'inOut');
+    TL.rumble.to(at(56), at(58), { v: 3 }, 'inOut');
     H.face(at(56), 2); H.face(at(56, 2), 0); H.face(at(58), 1); H.face(at(58, 2), 0);
+    for (const b of [56, 57, 58]) H.snap(at(b, 2), { roll: (b % 2 ? -1 : 1) * 0.07 });
 
     // ------------------------------------------------------------ 59: the second turn
     TL.shield.to(at(59), at(59, 0, 2), { a: 0 }, 'out');
     TL.und.to(at(58, 3), at(59), { ghost: 0 }, 'inOut');
-    H.cam(at(59), at(59, 1), { x: 480, y: 262, zoom: 1.12, pitch: 0, yaw: 0, roll: 0 }, 'inOut');
+    TL.rumble.to(at(59), at(59, 1), { v: 0.6 }, 'out');
+    H.cam(at(59), at(59, 1), { x: 480, y: 258, zoom: 1.14, pitch: 0, yaw: 0, roll: 0 }, 'inOut');
     TL.post.to(at(59), at(59, 1), { bloom: 1, ca: 0.6, bg: 0 }, 'inOut');
-    H.turn(at(59), at(59, 1), 3864, 0.86, 0.52, { big: true, after: 6, hurt: 0.6 });
+    H.turn(at(59), at(59, 1), 3864, 0.86, 0.52, { big: true, after: 6, hurt: 0.6, show: 0.56 });
     TL.und.to(at(59, 2), at(60), { drip: 0.7 }, 'inOut');
+    H.shout(at(59, 3, 1), at(60, 1, 2), '……还没完！！', { y: 70, k: 0.6 });
     H.swell(at(60), 0.4, 'SwellShort');
   });
 })();

@@ -20,6 +20,9 @@
     const fx = TL.fxAt(t);
     const cam = TL.cam.at(t);
     cam.x += fx.sx; cam.y += fx.sy;
+    // constant rumble under the boss's pressure
+    const rv = TL.rumble.at(t).v;
+    if (rv > 0.01) { cam.x += U.noise(t * 29) * rv; cam.y += U.noise(t * 33 + 11) * rv; cam.roll += U.noise(t * 9 + 3) * rv * 0.0016; }
     cam.zoom *= 1 + fx.zoom;
     cam.roll += fx.rot;
     const box = TL.box.at(t);
@@ -41,6 +44,7 @@
       aura: TL.aura.at(t).v,
       shield: Object.assign(TL.shield.at(t), { hit: sh }),
       und: TL.und.at(t), show: TL.uShow.at(t), head: TL.head.at(t), melt: TL.melt.at(t),
+      shadow: TL.shadow.at(t), rage: TL.rage.at(t).v,
       hud: TL.hud.at(t),
       btn: TL.btn.map((b) => b.at(t)),
       bg: TL.bg.at(t),
@@ -76,6 +80,7 @@
       };
       const bg = S.bg;
       if (bg.cav > 0.001) D.cavern(ctx, emi, t, { a: bg.cav, rain: bg.rain, drift: bg.drift, ceiling: bg.ceiling, k: bg.k });
+      this.drawShadow(S, t);
       layer(-1000, -100); // backdrops
       this.drawUndyne(S, t);
       layer(-100, 0);
@@ -107,10 +112,24 @@
       gB.filter = 'none';
       return S;
     }
+    // her giant shadow looming behind the arena, the eye burning red
+    drawShadow(S, t) {
+      const { ctx, emi } = this, sh = S.shadow;
+      if (sh.a <= 0.001) return;
+      const beatPh = (t - T.off) / T.beat;
+      const breathe = (1 - Math.abs(Math.sin(beatPh * Math.PI * 0.5))) * 2;
+      const o = { head: S.head, arm: S.und.arm * 0.6, t, melt: S.melt, scale: sh.sc, breathe, sil: '#0a1838', alpha: sh.a * 0.7, glow: 0, eye: 0 };
+      D.undyne(ctx, null, sh.x, sh.y, o);
+      if (sh.eye > 0.01 && !S.melt) {
+        const [ex, ey] = D.undyneEye(sh.x, sh.y, { scale: sh.sc, breathe });
+        D.eyeGlow(ctx, emi, ex, ey, sh.a * sh.eye, t, sh.sc / 2);
+      }
+    }
     drawUndyne(S, t) {
       const { ctx, emi } = this;
       const u = S.und;
       if (u.a <= 0.001) return;
+      if (S.rage > 0.01) D.rage(ctx, emi, u.x, u.y, u.sc, t, S.rage * u.a);
       const sh = u.shake || 0;
       const jx = sh ? R(U.noise(t * 47) * sh) : 0, jy = sh ? R(U.noise(t * 53 + 7) * sh * 0.6) : 0;
       // breathing on the beat (half time), the hair burning on its own clock

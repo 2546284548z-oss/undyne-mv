@@ -350,13 +350,29 @@
   };
   // point in world px of a body-local point (for spawning things from her hands etc.)
   D.undynePt = (x, y, bx, by, sc = 2) => [x + (bx - FOOT[0]) * sc, y + (by - FOOT[1]) * sc];
-  D.eyeGlow = (ctx, emi, x, y, k, t) => {
+  D.eyeGlow = (ctx, emi, x, y, k, t, s = 1) => {
     const fl = 0.75 + 0.25 * Math.sin(t * 31) * U.noise(t * 7);
-    D.rect(ctx, x - 2, y - 2, 4, 4, '#ffffff', k);
-    D.rect(ctx, x - 1, y - 6 * k, 2, 12 * k, '#ffe0e0', k * 0.8 * fl);
+    D.rect(ctx, x - 2 * s, y - 2 * s, 4 * s, 4 * s, '#ffffff', Math.min(1, k));
+    D.rect(ctx, x - 1 * s, y - 6 * k * s, 2 * s, 12 * k * s, '#ffe0e0', Math.min(1, k * 0.8 * fl));
     if (emi) {
-      D.rect(emi, x - 6, y - 6, 12, 12, '#ff3040', 0.9 * k * fl);
-      D.rect(emi, x - 2, y - 18 * k, 4, 36 * k, '#ff6060', 0.6 * k * fl);
+      D.rect(emi, x - 6 * s, y - 6 * s, 12 * s, 12 * s, '#ff3040', Math.min(1, 0.9 * k * fl));
+      D.rect(emi, x - 2 * s, y - 18 * k * s, 4 * s, 36 * k * s, '#ff6060', Math.min(1, 0.6 * k * fl));
+    }
+  };
+  // the aura burning off her: blue flame pixels rising around the body, red embers
+  D.rage = (ctx, emi, x, y, sc, t, v) => {
+    const k = sc / 2, n = Math.round(70 * Math.min(1.5, v));
+    for (let i = 0; i < n; i++) {
+      const sp = 0.7 + U.hash(i * 3.3) * 0.9, ph = (t * sp + U.hash(i * 7.7)) % 1;
+      const w = (U.hash(i * 1.9) - 0.5) * 2;
+      const px = x + w * 95 * k * (1 - ph * 0.4) + Math.sin(t * 6 + i) * 4;
+      const py = y - 10 * k - ph * 300 * k;
+      const red = i % 7 === 0;
+      const col = red ? '#ff3040' : i % 3 ? '#2a6bff' : '#9fe8ff';
+      const s = red ? 2 : 2 + Math.round(U.hash(i * 4.1) * 3);
+      const a = (1 - ph) * Math.min(1, v) * (red ? 1 : 0.7);
+      D.rect(ctx, px, py, s, s * (red ? 1 : 3), col, a);
+      if (emi) D.rect(emi, px - 3, py - 3, s + 6, s * 3 + 6, col, a * 0.6);
     }
   };
 

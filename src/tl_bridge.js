@@ -18,6 +18,15 @@
     H.cam(at(60), at(61), { x: 480, y: 255, zoom: 1.12, roll: 0, pitch: 0, yaw: 0 }, 'inOut');
     H.cam(at(61), at(70), { y: 226, zoom: 1.3 }, 'inOut');
     TL.und.to(at(60), at(62), { breathe: 0.5, eye: 0.35 }, 'inOut');
+    // still menacing: the shadow towers over the stage, its eye burning; the rumble never stops;
+    // she walks forward a step at a time (one step a phrase, each a thud)
+    TL.shadow.to(at(60), at(64), { a: 0.75, sc: 8, y: 860, eye: 1.6 }, 'inOut');
+    TL.rage.to(at(60), at(61), { v: 0.35 }, 'inOut');
+    TL.rumble.to(at(60), at(61), { v: 0.6 }, 'inOut');
+    [[61, 2.1, 300], [64, 2.2, 316], [67, 2.3, 332], [70, 2.4, 348]].forEach(([b, sc, y]) => {
+      TL.und.to(at(b) - 0.1, at(b) + 0.1, { sc, y }, 'outExpo');
+      H.sfx(at(b), 'Boom', 0.3); H.punch(at(b), 0.8, { dy: 1 });
+    });
     for (const t of [at(60, 1), at(61, 3), at(63, 2), at(65, 1), at(67, 3), at(69, 2)]) H.sfx(t, 'Drip', 0.3);
 
     // slow spears on the bridge's few accents
@@ -54,5 +63,8 @@
     H.sfx(at(71, 2), 'Shimmer', 0.4);
     H.swell(at(72), 0.55);
     H.cam(at(71), at(72), { y: 230, zoom: 1.7 }, 'in');
+    TL.rumble.to(at(71), at(72), { v: 4 }, 'in');
+    TL.rage.to(at(71), at(72), { v: 1.2 }, 'in');
+    H.speed(at(71, 2), at(72), { k: 0.8, cy: 220 });
   });
 })();

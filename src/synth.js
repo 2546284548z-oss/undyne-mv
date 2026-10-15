@@ -112,6 +112,15 @@
         o[i] = v * Math.min(1, t * 30) * 0.3;
       }
     }),
+    // a heavy metallic clang for the strongest blocks: inharmonic partials over a noise crack
+    Clang: hit(0.5, 37, 0.85, (o, sr, nz) => {
+      const fs = [523, 1131, 1787, 2459, 3301], hp = biquad(sr).set('hp', 1800);
+      for (let i = 0; i < o.length; i++) {
+        const t = i / sr; let v = 0;
+        fs.forEach((f, k) => { v += Math.sin(TAU * f * t + k * 1.3) * Math.exp(-t * (7 + k * 3)) / (1 + k * 0.4); });
+        o[i] = v * 0.5 + hp.run(nz()) * env(t, 0.0005, 60) * 0.9;
+      }
+    }),
     // low rumble under the dust and the transformation
     Rumble: hit(2.4, 31, 0.6, (o, sr, nz) => {
       const lp = biquad(sr).set('lp', 120);

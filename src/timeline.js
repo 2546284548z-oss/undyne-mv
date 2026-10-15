@@ -36,6 +36,11 @@
   TL.post = new Track({ bloom: 1, vig: 0.35, desat: 0, tint: 0, tintAmt: 0, grid: 0, scan: 0.04, letter: 0, bg: 0, bgHue: 0.6, ca: 0.5, glitch: 0 });
   TL.boxHits = [];
   TL.shieldHits = [];
+  // boss pressure: a constant camera rumble (px), her giant shadow behind the arena,
+  // the aura burning off her
+  TL.rumble = new Track({ v: 0 });
+  TL.shadow = new Track({ a: 0, x: 480, y: 760, sc: 7, eye: 1 });
+  TL.rage = new Track({ v: 0 });
 
   // sections register builders; they run after the assets are loaded
   MV.sections = [];
@@ -91,9 +96,9 @@
   const OPP = { u: 'd', d: 'u', l: 'r', r: 'l' };
   H.SIDE_ANG = { u: -Math.PI / 2, d: Math.PI / 2, l: Math.PI, r: 0 };
   TL.greens = [];
-  H.ARROW = 1.4; // arrow-spear size (the game's 1x reads too small in the MV's framing)
+  H.ARROW = 1.9; // arrow-spear size (the game's 1x reads too small in the MV's framing)
   H.green = (tHit, side, o = {}) => {
-    const kind = o.kind || 'blue', travel = o.travel || 0.62, dist = o.dist || 300;
+    const kind = o.kind || 'blue', travel = o.travel || 0.48, dist = o.dist || 400;
     const stop = D.SHIELD_R + 3; // tip distance from the soul at the block
     const final = kind === 'yel' ? o.turn || OPP[side] : side;
     const t0 = tHit - travel;
@@ -126,7 +131,14 @@
     H.sfx(t0, 'UndSpearAppear', o.vol ?? 0.12);
     H.sfx(tHit, 'Block', o.hitVol ?? 0.5);
     TL.shieldHits.push({ t: tHit, side: final });
-    TL.burst(tHit, { x: () => TL.soul.at(tHit).x + SIDE[final][0] * stop, y: () => TL.soul.at(tHit).y + SIDE[final][1] * stop, n: 10, speed: [60, 160], life: [0.15, 0.35], colors: kind === 'yel' ? ['#ffff40', '#ffffff'] : ['#5fd8ff', '#ffffff', '#2a6bff'], size: 2, z: 36 });
+    // the block: sparks thrown back along the spear's line, the camera kicked away from it
+    const heavy = o.heavy || kind === 'yel';
+    const bx = () => TL.soul.at(tHit).x + SIDE[final][0] * stop, by = () => TL.soul.at(tHit).y + SIDE[final][1] * stop;
+    const back = Math.atan2(SIDE[final][1], SIDE[final][0]);
+    TL.burst(tHit, { x: bx, y: by, n: heavy ? 22 : 14, speed: [90, heavy ? 320 : 230], ang: [back - 0.9, back + 0.9], life: [0.12, 0.32], colors: kind === 'yel' ? ['#ffff40', '#ffffff', '#ffb000'] : ['#5fd8ff', '#ffffff', '#2a6bff'], size: [2, 3], z: 36 });
+    TL.ring(tHit, bx, by, { r0: 4, r1: heavy ? 46 : 30, w: heavy ? 4 : 3, dur: 0.22, color: kind === 'yel' ? '#ffff80' : '#bff0ff', z: 37 });
+    TL.impact(tHit, { amp: heavy ? 4.5 : 2.4, dx: -SIDE[final][0] * 1.6, dy: -SIDE[final][1] * 1.6, zoom: heavy ? 0.03 : 0.012, ca: heavy ? 2.4 : 1, flash: heavy ? 0.08 : 0, dur: 0.2 });
+    if (heavy) H.sfx(tHit, 'Clang', 0.32);
     return TL.add({
       t0, t1: tHit, z: -150, kind: 'green', sp,
       draw(ctx, emi, t, S) {
@@ -140,6 +152,14 @@
           ctx.drawImage(img, -R(img.width * ax), -R(img.height * ay));
           ctx.restore();
           return;
+        }
+        // a motion streak behind the shaft
+        const v = SIDE[kind === 'yel' && t < tTurn ? side : final];
+        const tail = 25 * H.ARROW, col = kind === 'yel' ? '#ffe040' : '#5fd8ff';
+        for (let k = 0; k < 5; k++) {
+          const d0 = tail + k * 16, w = Math.max(2, 6 - k);
+          const cx = p.x + v[0] * (d0 + 8), cy = p.y + v[1] * (d0 + 8);
+          D.rect(ctx, cx - (v[0] ? 8 : w / 2), cy - (v[1] ? 8 : w / 2), v[0] ? 16 : w, v[1] ? 16 : w, col, fade * (0.45 - k * 0.08));
         }
         D.arrow(ctx, emi, kind, p.dir, p.x, p.y, { alpha: fade, scale: H.ARROW });
       },
@@ -180,13 +200,12 @@
   // a spear thrusting out of a box wall: warn from tw, out at tHit, back at tHit + hold.
   // side: 'b' (up from the floor) | 't' (down from the ceiling) | 'l' | 'r'; pos: x (or y) in world
   H.wallSpear = (tw, tHit, side, pos, o = {}) => {
-    const hold = o.hold ?? 0.32, len = o.len || 90, warnW = 18;
-    const t1 = tHit + hold + 0.12;
-    H.sfx(tw, 'UndSpearAppear', 0.18);
-    H.sfx(tHit, 'UndSpearRise', o.vol ?? 0.4);
+    const hold = o.hold ?? 0.32, len = o.len || 90, warnW = 18, back = o.retract ?? 0.12;
+    const t1 = tHit + hold + back;
+    if (o.sfx !== false) { H.sfx(tw, 'UndSpearAppear', 0.18); H.sfx(tHit, 'UndSpearRise', o.vol ?? 0.4); }
     const geo = (t, S) => {
       const b = S ? S.box : TL.box.at(t);
-      const out = t < tHit ? 0 : t < tHit + 0.06 ? U.eOut((t - tHit) / 0.06) : t < tHit + hold ? 1 : 1 - U.clamp((t - tHit - hold) / 0.12);
+      const out = t < tHit ? 0 : t < tHit + 0.05 ? U.eOut((t - tHit) / 0.05) : t < tHit + hold ? 1 : 1 - U.clamp((t - tHit - hold) / back);
       const L2 = len * out;
       if (side === 'b') return { b, out, x: pos, y: b.y + b.h - L2, ang: -Math.PI / 2, rect: [pos - 6, b.y + b.h - L2, 12, L2] };
       if (side === 't') return { b, out, x: pos, y: b.y + L2, ang: Math.PI / 2, rect: [pos - 6, b.y, 12, L2] };
@@ -390,6 +409,181 @@
           MV.spr(ctx, MV.sil('shard' + i, col), x + Math.cos(a) * 90 * u, y + Math.sin(a) * 90 * u + 220 * u * u, { alpha: 1 - u / 1.2 });
         },
       });
+    }
+  };
+
+  // ---------------------------------------------------------------- boss pressure
+  // radial speed lines (screen space) toward (cx, cy); o: {k, cx, cy, n, col, dir: 'h' for horizontal}
+  H.speed = (t0, t1, o = {}) =>
+    TL.add({
+      t0, t1, z: 75, screen: true,
+      draw(ctx, emi, t) {
+        const k = (o.k ?? 1) * Math.min(U.clamp((t - t0) / 0.08), U.clamp((t1 - t) / 0.15));
+        const cx = o.cx ?? 480, cy = o.cy ?? 270, n = o.n || 56;
+        ctx.fillStyle = o.col || '#ffffff';
+        for (let i = 0; i < n; i++) {
+          const ph = (t * (2.2 + U.hash(i * 3.3) * 2) + U.hash(i * 7.1)) % 1;
+          if (o.dir === 'h') {
+            const y = U.hash(i * 5.7) * 540, x = (o.flip ? 1 - ph : ph) * 1400 - 220, len = 80 + U.hash(i) * 160;
+            ctx.globalAlpha = k * (0.25 + U.hash(i * 2.1) * 0.35);
+            ctx.fillRect(Math.round(x), Math.round(y), Math.round(len), 2);
+            continue;
+          }
+          const a = U.hash(i * 1.37) * U.TAU, r = 260 + ph * 420, len = 60 + U.hash(i * 9.3) * 140;
+          ctx.save();
+          ctx.translate(cx + Math.cos(a) * r, cy + Math.sin(a) * r); ctx.rotate(a);
+          ctx.globalAlpha = k * (0.3 + 0.4 * (1 - ph));
+          ctx.fillRect(0, -1, Math.round(len), 2 + (i % 3 === 0 ? 1 : 0));
+          ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+      },
+    });
+  // a big shouted line (screen space): slams in oversized, shakes, red outline
+  H.shout = (t0, t1, str, o = {}) => {
+    H.sfx(t0, 'Slam', o.vol ?? 0.45);
+    if (o.hit !== false) H.hit(t0, o.k ?? 0.8);
+    return TL.add({
+      t0, t1, z: 82, screen: true,
+      draw(ctx, emi, t) {
+        const u = t - t0, out = U.clamp((t1 - t) / 0.18);
+        const sc = (o.scale || 4) + (u < 0.06 ? 3 : u < 0.12 ? 1 : 0);
+        const sh = (o.shake ?? 3) * (u < 0.3 ? 2 : 1);
+        D.text(ctx, str, o.x ?? 480, (o.y ?? 92) - (sc - (o.scale || 4)) * 8, { scale: sc, align: 'center', alpha: out, color: o.color || '#ffffff', outline: o.outline || '#c00018', shake: sh, seed: Math.floor(t * 30) });
+      },
+    });
+  };
+  // the boss cut-in: a slanted band slams across the screen with her face and a line
+  H.cutin = (t0, dur, o = {}) => {
+    const t1 = t0 + dur;
+    H.sfx(t0, 'Slam', 0.55);
+    H.sfx(t0 + 0.05, 'EyeFlash', 0.4);
+    H.sfx(t0, 'Whoosh', 0.5);
+    H.hit(t0, 1.1, { flash: 0.35 });
+    return TL.add({
+      t0, t1, z: 90, screen: true,
+      draw(ctx, emi, t) {
+        const inU = U.eOutExpo(U.clamp((t - t0) / 0.14)), outU = U.eInExpo(U.clamp((t - (t1 - 0.14)) / 0.14));
+        const off = (1 - inU) * 1100 - outU * 1100;
+        const cy = o.y ?? 270, h = o.h || 176, skew = 70;
+        ctx.save();
+        ctx.translate(Math.round(off), 0);
+        // band
+        const band = () => { ctx.beginPath(); ctx.moveTo(-200, cy - h / 2 + skew); ctx.lineTo(1160, cy - h / 2 - skew); ctx.lineTo(1160, cy + h / 2 - skew); ctx.lineTo(-200, cy + h / 2 + skew); ctx.closePath(); };
+        ctx.fillStyle = '#000000'; band(); ctx.fill();
+        ctx.save(); band(); ctx.clip();
+        // speed lines inside the band
+        ctx.fillStyle = '#1e3a8a';
+        for (let i = 0; i < 40; i++) {
+          const y = cy - h / 2 - skew + U.hash(i * 3.1) * (h + skew * 2), ph = (t * 3.5 + U.hash(i * 5.3)) % 1;
+          ctx.fillRect(Math.round(1200 - ph * 1600), Math.round(y), 120 + Math.round(U.hash(i) * 200), 3);
+        }
+        // her face, huge
+        const head = MV.part('und/head' + (o.head ?? 12)), hs = o.headScale || 6;
+        const hx = o.faceX ?? 250, hy = cy - (head.height * hs) / 2 + 20;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(head, hx - (head.width * hs) / 2, hy, head.width * hs, head.height * hs);
+        // the burning eye
+        const ex = hx - (head.width * hs) / 2 + 12 * hs, ey = hy + 13 * hs, fl = 0.7 + 0.3 * Math.sin(t * 40);
+        ctx.fillStyle = '#ff2030'; ctx.globalAlpha = fl; ctx.fillRect(Math.round(ex - 10), Math.round(ey - 10), 20, 20);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(ex - 4), Math.round(ey - 4), 8, 8); ctx.globalAlpha = 1;
+        ctx.restore();
+        // edges
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; band(); ctx.stroke();
+        ctx.strokeStyle = '#ff2030'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-200, cy - h / 2 + skew + 9); ctx.lineTo(1160, cy - h / 2 - skew + 9); ctx.moveTo(-200, cy + h / 2 + skew - 9); ctx.lineTo(1160, cy + h / 2 - skew - 9); ctx.stroke();
+        if (o.text) {
+          const u = t - t0, sh = u < 0.35 ? 4 : 2;
+          D.text(ctx, o.text, o.textX ?? 660, cy - 30 - (o.textX ? 0 : 0), { scale: o.textScale || 4, align: 'center', color: '#ffffff', outline: '#c00018', shake: sh, seed: Math.floor(t * 30) });
+        }
+        ctx.restore();
+      },
+    });
+  };
+  // huge spears tearing across the screen behind the arena (harmless; pure menace)
+  H.barrage = (t, n = 3, o = {}) => {
+    H.sfx(t, 'Whoosh', o.vol ?? 0.35);
+    for (let i = 0; i < n; i++) {
+      const seed = t * 13.7 + i * 7.3;
+      const ang = (o.ang ?? (U.hash(seed) < 0.5 ? 0.35 : Math.PI - 0.35)) + (U.hash(seed + 1) - 0.5) * 0.5;
+      const cx = 480 + (U.hash(seed + 2) - 0.5) * 700, cy = 250 + (U.hash(seed + 3) - 0.5) * 380;
+      const L2 = 1500, t0 = t + i * (o.gap ?? 0.05), dur = o.dur ?? 0.32;
+      const x0 = cx - Math.cos(ang) * L2 / 2, y0 = cy - Math.sin(ang) * L2 / 2, x1 = cx + Math.cos(ang) * L2 / 2, y1 = cy + Math.sin(ang) * L2 / 2;
+      TL.add({
+        t0, t1: t0 + dur, z: o.z ?? -200,
+        draw(ctx, emi, tt) {
+          const u = (tt - t0) / dur, x = U.lerp(x0, x1, u), y = U.lerp(y0, y1, u);
+          ctx.save(); ctx.globalAlpha = 0.28; ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(x - Math.cos(ang) * 420, y - Math.sin(ang) * 420); ctx.lineTo(x, y); ctx.stroke(); ctx.restore();
+          D.spear(ctx, emi, x, y, ang, { len: 150, scale: o.scale ?? 2.4, glow: 0.6 });
+        },
+      });
+    }
+  };
+  // shockwave: two pixel rings + a dust spray
+  H.shock = (t, x, y, o = {}) => {
+    TL.ring(t, x, y, { r0: 10, r1: o.r || 300, w: 7, dur: 0.5, color: o.color || '#ffffff', z: o.z ?? 44 });
+    TL.ring(t + 0.06, x, y, { r0: 6, r1: (o.r || 300) * 0.6, w: 4, dur: 0.45, color: o.color2 || '#5fd8ff', z: o.z ?? 44 });
+    if (o.dust !== false) TL.burst(t, { x, y, n: 34, speed: [120, 380], ang: o.ang || [Math.PI, U.TAU], life: [0.25, 0.6], g: 300, colors: ['#ffffff', '#9fe8ff', '#5f7fa8'], size: [2, 4], z: 45 });
+  };
+  // Undyne moves
+  const base = (t) => TL.und.at(t);
+  H.lunge = (t, k = 1) => {
+    const p = base(t - 0.06);
+    TL.und.to(t - 0.06, t + 0.05, { sc: 2 + 0.4 * k, y: p.y + 58 * k, lean: 0.06 * k }, 'outExpo');
+    TL.und.to(t + 0.05, t + 0.55, { sc: 2, y: p.y, lean: 0 }, 'inOut');
+    H.sfx(t, 'Whoosh', 0.3);
+  };
+  H.slam = (t, x, o = {}) => {
+    H.bigHit(t, { flash: 0.4, dur: 0.55, amp: 14, ...o.fx });
+    H.sfx(t, 'Slam', 0.6); H.sfx(t, 'Boom', 0.45);
+    H.shock(t, x, MV.LAYOUT.und[1], { r: 340, ang: [Math.PI * 1.05, Math.PI * 1.95] });
+    H.boxHit(t + 0.02, 'top', 0.5, 9);
+    TL.rumble.to(t, t + 0.02, { v: 9 }, 'lin').to(t + 0.02, t + 0.6, { v: o.rest ?? 0 }, 'out');
+  };
+  H.leap = (t0, t1, x, h = 220, o = {}) => {
+    H.sfx(t0, 'Whoosh', 0.4);
+    TL.und.hop(t0, t1, { x }, h, 'y', 'inOut');
+    TL.und.to(t0, t0 + 0.1, { ghost: 0.7 }, 'out').to(t1 - 0.05, t1 + 0.3, { ghost: o.ghost ?? 0 }, 'out');
+    if (o.slam !== false) H.slam(t1, x, o);
+  };
+  H.dash = (t0, t1, x) => {
+    H.sfx(t0, 'Whoosh', 0.35);
+    TL.und.to(t0, t1, { x }, 'outExpo');
+    const g = base(t0).ghost;
+    TL.und.to(t0, t0 + 0.04, { ghost: 0.9 }, 'out').to(t1, t1 + 0.3, { ghost: g }, 'out');
+  };
+  H.roar = (t, str, o = {}) => {
+    H.face(t, o.head ?? 12);
+    H.face(t + (o.len ?? 1.2), o.after ?? 0);
+    const u = TL.und.at(t);
+    const [ex, ey] = D.undyneEye(u.x, u.y);
+    H.shock(t, ex, ey, { r: 420, dust: false, z: -90 });
+    TL.rumble.to(t, t + 0.03, { v: 7 }, 'lin').to(t + 0.03, t + (o.len ?? 1.2), { v: o.rest ?? 1 }, 'out');
+    TL.und.to(t, t + 0.03, { eye: 2 }, 'lin').to(t + 0.03, t + 0.6, { eye: o.eye ?? 0.8 }, 'out');
+    H.speed(t, t + (o.len ?? 1.2) * 0.8, { k: 0.8, cy: 200 });
+    if (str) H.shout(t, t + (o.len ?? 1.2), str, { y: o.y, scale: o.scale, k: 1.2 });
+  };
+  // a burst of spears down one side in quick succession (the shield holds, sparks pile up)
+  H.flurry = (t0, side, n = 4, step = T.s16, o = {}) => { for (let i = 0; i < n; i++) H.green(t0 + i * step, side, Object.assign({ travel: 0.4, hitVol: 0.42 }, o)); };
+  // red soul: a fence of spears from one wall with one gap at gapX
+  H.fence = (tw, tHit, side, gapX, o = {}) => {
+    const b = MV.LAYOUT.boxRed, gap = o.gap ?? 40;
+    H.sfx(tw, 'UndSpearAppear', 0.3); H.sfx(tHit, 'UndSpearRise', 0.55);
+    H.punch(tHit, 0.8, { dy: side === 'b' ? -1 : 1 });
+    H.boxHit(tHit, side === 'b' ? 'bottom' : 'top', U.clamp((gapX - b.x) / b.w), 5);
+    for (let x = b.x + 18; x <= b.x + b.w - 18; x += o.step || 30) {
+      if (Math.abs(x - gapX) < gap) continue;
+      H.wallSpear(tw, tHit, side, x, { len: o.len ?? 112, hold: o.hold ?? 0.16, retract: 0.1, sfx: false });
+    }
+  };
+  // red soul: jaws - spears from floor and ceiling at once, the soul threads the middle lane
+  H.jaws = (tw, tHit, xs, o = {}) => {
+    H.sfx(tw, 'UndSpearAppear', 0.3); H.sfx(tHit, 'UndSpearRise', 0.55); H.sfx(tHit, 'Clang', 0.3);
+    H.punch(tHit, 1);
+    for (const x of xs) {
+      H.wallSpear(tw, tHit, 'b', x, { len: 58, hold: o.hold ?? 0.22, retract: 0.1, sfx: false });
+      H.wallSpear(tw, tHit, 't', x, { len: 58, hold: o.hold ?? 0.22, retract: 0.1, sfx: false });
     }
   };
 })();
