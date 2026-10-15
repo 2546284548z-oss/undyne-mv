@@ -93,9 +93,9 @@
   TL.glitch = (t0, t1, amt = 1) => TL.glitches.push({ t0, t1, amt });
   // visual time remaps (rewinds): inside [t0, t1] the picture shows f(t) instead of t
   TL.remaps = [];
-  TL.remap = (t0, t1, f) => TL.remaps.push({ t0, t1, f });
+  TL.remap = (t0, t1, f, vhs = true) => TL.remaps.push({ t0, t1, f, vhs });
   TL.vt = (t) => { for (const r of TL.remaps) if (t >= r.t0 && t < r.t1) return r.f(t); return t; };
-  TL.vhsAt = (t) => { for (const r of TL.remaps) if (t >= r.t0 && t < r.t1) return 1; return 0; };
+  TL.vhsAt = (t) => { for (const r of TL.remaps) if (t >= r.t0 && t < r.t1) return r.vhs ? 1 : 0; return 0; };
 
   TL.finalize = () => {
     TL.events.sort((a, b) => a.t0 - b.t0);

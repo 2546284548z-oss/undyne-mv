@@ -10,6 +10,8 @@
   function start() {
   MV.buildTimeline();
   TL.finalize();
+  // builders that need the finished timeline (graze detection samples the hazards)
+  if (MV.late.length) { MV.late.forEach((f) => f()); TL.finalize(); }
   const canvas = document.getElementById('mv');
   const scene = (MV.scene = new MV.Scene());
   const post = new MV.Post(canvas);
@@ -21,7 +23,9 @@
   MV.renderFrame = (tReal) => {
     const t = TL.vt(tReal);
     const vhs = TL.vhsAt(tReal);
+    MV.tReal = tReal; // hit-stop: the picture holds, overlays keep running on real time
     const S = scene.render(t);
+    S.cam.zoom *= MV.freezeZoom ? MV.freezeZoom(tReal) : 1;
     const P = S.post, fx = S.fx;
     const env = T.env(t, 'rms');
     const cam = S.cam;

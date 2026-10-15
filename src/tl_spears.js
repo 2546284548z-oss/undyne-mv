@@ -174,6 +174,14 @@
       if (b < 31) H.leap(at(b, 2), at(b + 1), b % 2 ? 620 : 340, 200, { fx: { flash: 0.12, amp: 8 }, rest: 1.6 });
       H.throwArm(at(b, 1), 0.9);
     }
+    // Touhou, introduced: each four-bar attack is declared as a spell card; Deltarune's TP
+    // shows up the first time the soul grazes a spear and climbs to 60 % by bar 43
+    H.spell(at(28), at(31, 3), '枪符「正义之矛」');
+    H.spell(at(32), at(35, 3), '水符「瀑布之雨」');
+    H.spell(at(36), at(39, 3), '矛符「十二之环」');
+    H.spell(at(40), at(43, 1), '眼符「独眼光束」', { bonus: false });
+    TL.boss.to(at(28, 1), at(28, 2), { tpa: 1 }, 'out');
+    H.tpWindow(at(28), at(43, 2), 0, 0.6);
     H.say(at(29, 2), at(31), ['给我动起来！'], { cps: 14 });
     H.face(at(29, 2), 9); H.face(at(31), 0);
     H.leap(at(31, 2), at(32), 480, 160, { fx: { flash: 0.15, amp: 9 }, rest: 1.6 });
@@ -221,6 +229,10 @@
     H.say(at(42, 2), at(43, 2), ['不会让你过去的！'], { cps: 16 });
     H.face(at(42, 2), 2);
     H.cutin(at(43, 2, 1), 0.72, { text: '这才刚刚开始！！', head: 11 });
+    // JSAB, foreshadowed: her blow cracks the box (it holds - for now)
+    TL.boss.to(at(43, 2, 1), at(43, 2, 2), { crack: 0.35 }, 'outExpo');
+    H.sfx(at(43, 2, 1), 'UndBreak1', 0.4);
+    H.boxHit(at(43, 2, 1), 'top', 0.4, 10);
     H.face(at(44), 0);
     H.swell(at(44), 0.5);
 
@@ -237,22 +249,29 @@
     TL.rage.to(at(44), at(45), { v: 1.25 }, 'inOut');
     TL.rumble.to(at(44), at(45), { v: 2.2 }, 'inOut');
     TL.shadow.to(at(44), at(45), { a: 0.85 }, 'inOut');
-    const flur44 = { 47: 'l', 49: 'd', 51: 'r', 55: 'u', 57: 'l' };
+    // Sekiro, in full: posture climbs all the way; four 危 thrusts; it breaks on 58's last beat
+    TL.boss.to(at(44), at(44, 1), { pa: 1, tpa: 0 }, 'out');
+    H.postureWindow(at(44), at(58, 3), 0.12, 0.93);
+    const peril44 = { 47: 1, 51: -1, 55: 1, 57: -1 };
+    const flur44 = { 49: 'd', 53: 'r' };
     for (let b = 44; b < 59; b++) {
       const f = flur44[b];
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: b >= 52 ? 0.85 : 0, gap: 2, yel: 0.4, travel: b >= 52 ? 0.42 : 0.46, from: b === 44 ? 2 : 0, to: f ? 12 : 16 });
+      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: b >= 52 ? 0.85 : 0, gap: 2, yel: 0.4, travel: b >= 52 ? 0.42 : 0.46, from: b === 44 ? 2 : 0, to: peril44[b] ? 9 : b === 58 ? 12 : f ? 12 : 16 });
       if (f) H.flurry(at(b, 3), f, 4);
+      if (peril44[b]) H.peril(at(b, 3), { dir: peril44[b] });
       if (b % 2 === 0) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 0, 2), 2, { vol: 0.2 }); }
       if (b % 2 === 1 && b < 52) H.lunge(at(b), 0.5);
       for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.5);
     }
     // the arena sways on the 2-bar phrases
     for (let b = 44; b < 52; b += 2) H.cam(at(b), at(b + 2), { yaw: (b / 2) % 2 ? -0.18 : 0.18 }, 'inOut');
-    // 52 - 55: the world turns a quarter each bar
-    for (let i = 0; i < 4; i++) H.cam(at(52 + i) - 0.12, at(52 + i) + 0.18, { roll: (i + 1) * Math.PI / 2, yaw: 0, pitch: 0.2 }, 'outExpo');
-    H.cut(at(56) - 0.001, { roll: 0 });
-    for (let i = 0; i < 4; i++) { H.hit(at(52 + i), 0.7); H.dash(at(52 + i) - 0.1, at(52 + i) + 0.08, [380, 580, 400, 480][i]); }
+    // 52 - 55: flatter, closer; she dashes on every downbeat
+    for (let i = 0; i < 4; i++) {
+      H.snap(at(52 + i), { yaw: 0, pitch: 0.12, roll: (i % 2 ? -1 : 1) * 0.08, zoom: i % 2 ? 1.48 : 1.38 });
+      H.hit(at(52 + i), 0.7); H.dash(at(52 + i) - 0.1, at(52 + i) + 0.08, [380, 580, 400, 480][i]);
+    }
     H.speed(at(52), at(56), { k: 0.45 });
+    H.postureBreak(at(58, 3));
     H.say(at(48), at(50), ['大家的希望……', '都在我身上！'], { cps: 14 });
     H.face(at(48), 6); H.face(at(50), 0);
     // 56 - 58: the peak - closer, hotter
@@ -269,6 +288,12 @@
     H.cam(at(59), at(59, 1), { x: 480, y: 258, zoom: 1.14, pitch: 0, yaw: 0, roll: 0 }, 'inOut');
     TL.post.to(at(59), at(59, 1), { bloom: 1, ca: 0.6, bg: 0 }, 'inOut');
     H.turn(at(59), at(59, 1), 3864, 0.86, 0.52, { big: true, after: 6, hurt: 0.6, show: 0.56 });
+    // the deathblow (Sekiro) with a longer hit-stop (Smash): the bar empties, a life goes out,
+    // the box cracks wider
+    H.freeze(at(59, 1) + 0.02, 0.3, { zoom: 0.12 });
+    H.deathblow(at(59, 1), { lives: 1 });
+    TL.boss.to(at(59, 1), at(59, 1, 1), { crack: 0.7 }, 'outExpo');
+    H.sfx(at(59, 1), 'UndBreak2', 0.4);
     TL.und.to(at(59, 2), at(60), { drip: 0.7 }, 'inOut');
     H.shout(at(59, 3, 1), at(60, 1, 2), '……还没完！！', { y: 70, k: 0.6 });
     H.swell(at(60), 0.4, 'SwellShort');

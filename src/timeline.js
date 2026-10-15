@@ -44,7 +44,8 @@
 
   // sections register builders; they run after the assets are loaded
   MV.sections = [];
-  MV.buildTimeline = () => { MV.sections.forEach((f) => f()); H.buildShield(); };
+  MV.late = [];
+  MV.buildTimeline = () => { MV.sections.forEach((f) => f()); H.buildShield(); H.buildPosture(); };
 
   // ---------------------------------------------------------------- sound effects
   // {t, name, vol}: played live through WebAudio and mixed into the export
@@ -242,17 +243,17 @@
         const dx = x - px, dy = y - py, along = -(dx * cx + dy * sy);
         if (along < -4 || along > len) return false;
         const perp = Math.abs(dx * sy - dy * cx);
-        return perp < SOUL_R + 3;
+        return perp < SOUL_R + (o.width ?? 3);
       },
       draw(ctx, emi, t) {
         if (t < t0) { // a faint line along the flight path
           const k = U.clamp((t - t0 + warn) / warn);
-          ctx.globalAlpha = 0.25 * k; ctx.strokeStyle = '#ff4050'; ctx.lineWidth = 2;
+          ctx.globalAlpha = (o.warnA ?? 0.25) * k; ctx.strokeStyle = '#ff4050'; ctx.lineWidth = o.warnW ?? 2;
           ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.globalAlpha = 1;
           return;
         }
         const [px, py] = pos(t);
-        D.spear(ctx, emi, px, py, ang, { len, color: o.color });
+        D.spear(ctx, emi, px, py, ang, { len, color: o.color, scale: o.scale });
       },
     });
   };

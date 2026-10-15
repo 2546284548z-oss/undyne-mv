@@ -58,11 +58,17 @@
     TL.bg.to(at(12), at(13), { cav: 0.85, drift: 24 }, 'inOut');
 
     // ------------------------------------------------------------ 12 - 19
-    const flur12 = { 15: 'l', 17: 'r', 19: 'u' };
+    // Sekiro, introduced: the posture bar under her name climbs with every block (never to
+    // the top yet), and twice a 危 thrust must be sidestepped instead of blocked
+    TL.boss.to(at(12), at(12, 2), { pa: 1 }, 'out');
+    H.postureWindow(at(12), at(27), 0, 0.62);
+    const peril12 = { 19: 1, 25: -1 };
+    const flur12 = { 15: 'l', 17: 'r' };
     for (let b = 12; b < 20; b++) {
       const f = flur12[b];
-      H.greenBar(b, { tone: 0.8, snare: 0.5, gap: 2, yel: b >= 14 ? 0.35 : 0, to: f ? 12 : 16 });
+      H.greenBar(b, { tone: 0.8, snare: 0.5, gap: 2, yel: b >= 14 ? 0.35 : 0, to: peril12[b] ? 9 : f ? 12 : 16 });
       if (f) H.flurry(at(b, 3), f, 4);
+      if (peril12[b]) H.peril(at(b, 3), { dir: peril12[b] });
       if (b % 2 === 0 && b > 12) {
         H.snap(at(b), { zoom: b % 4 ? 1.46 : 1.32, x: b % 4 ? 492 : 468, roll: b % 4 ? -0.05 : 0.045 });
         H.lunge(at(b), 0.55);
@@ -86,8 +92,9 @@
     const flur20 = { 22: 'd', 24: 'l', 26: 'r' };
     for (let b = 20; b < 27; b++) {
       const f = flur20[b];
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.85, gap: 2, yel: 0.45, to: f ? 12 : 16 });
+      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.85, gap: 2, yel: 0.45, to: peril12[b] ? 9 : f ? 12 : 16 });
       if (f) H.flurry(at(b, 3), f, 4);
+      if (peril12[b]) H.peril(at(b, 3), { dir: peril12[b] });
       H.dash(at(b) - 0.12, at(b) + 0.08, xs[b]);
       H.snap(at(b), { zoom: b % 2 ? 1.5 : 1.4, x: 480 + (xs[b] - 480) * 0.25, roll: (b % 2 ? -1 : 1) * 0.09 });
       for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.55);
@@ -103,6 +110,10 @@
     TL.rumble.to(at(27), at(27, 1), { v: 0.5 }, 'out');
     H.cam(at(27), at(27, 1), { x: 480, y: 258, zoom: 1.12, roll: 0 }, 'inOut');
     H.turn(at(27), at(27, 1), 2475, 1, 0.86, { after: 14, hurt: 0.1, show: 0.48 });
+    // the hit-stop (Smash) on the cut; the boss bar takes it (Souls); she shakes the posture off
+    H.freeze(at(27, 1) + 0.35, 0.14, { zoom: 0.08 });
+    H.bossHp(at(27, 1) + 0.32, 0.86);
+    TL.boss.to(at(27, 3), at(28), { posture: 0.12 }, 'out').to(at(28), at(28, 2), { pa: 0 }, 'inOut');
     H.roar(at(27, 3), '就这样？！', { len: 1.0, head: 12, after: 0, rest: 1.4 });
     H.swell(at(28), 0.45);
   });

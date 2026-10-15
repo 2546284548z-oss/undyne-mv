@@ -1,9 +1,12 @@
 // Bars 72 - 97, the last section: three 8-bar phrases, everything she has.
-//   72 - 79  green: the cut-in, then the densest shield storm yet; she dashes every bar
-//   80 - 87  red: fences, rain, rings, beams, sweeps - all of it once more, leaping
-//   88 - 95  green: the storm again; 92 - 93 the world turns; 94 her spears ring the
-//            soul; 95's drum fill sends them in one per 16th, the shield spinning round
-//   96       the last hit lands on the last chord. The HP bar empties; she does not fall.
+//   72       phase two: the cut-in, the emptied boss bar refills under a new name
+//   72 - 79  green: the densest shield storm yet, posture again, two more 危; she dashes every bar
+//   80 - 87  red: four spell cards with new danmaku - a snaking corridor, a lattice, spear
+//            flowers, the last spell; a ring of 24 spears no one could dodge, broken by full TP
+//   88 - 93  the box shatters: the whole screen is the arena (walls, flowers, giant spears)
+//   93 - 95  the box rebuilds; her spears ring the soul; 95's drum fill sends them in one per
+//            16th, the shield spinning round
+//   96       the last hit lands on the last chord: the freeze frame; the bar empties for good.
 (function () {
   const MV = window.MV, U = MV.U, D = MV.D, T = MV.T, TL = MV.TL, H = MV.H, L = MV.LAYOUT;
   const at = T.at;
@@ -30,14 +33,25 @@
     H.shock(at(72), 480, 150, { r: 520, dust: false });
     H.barrage(at(72, 1, 3), 5);
 
+    // phase two (Elden Ring): the emptied bar refills, the name changes, the last life burns
+    TL.bossName.set(at(72), '真正的英雄 安黛因');
+    TL.boss.set(at(72), { a: 1, phase2: 1 });
+    H.bossHp(at(72, 0, 2), 1, { dur: 1.1, ease: 'inOut', lagDelay: 0 });
+    H.sfx(at(72, 0, 2), 'Power', 0.5);
+
     // ------------------------------------------------------------ 72 - 79: storm, she never stops moving
+    // posture is back (she can be broken again - but there is no time); two more 危
+    TL.boss.to(at(72, 2), at(73), { pa: 1, posture: 0 }, 'out');
+    H.postureWindow(at(73), at(79, 3), 0, 0.82);
+    const peril72 = { 75: 1, 77: -1 };
     H.resetGreen('u');
     const xs72 = [480, 370, 590, 400, 560, 360, 600, 480];
-    const flur72 = { 73: 'l', 75: 'r', 77: 'd', 79: 'u' };
+    const flur72 = { 73: 'l', 79: 'u' };
     for (let b = 72; b < 80; b++) {
       const f = flur72[b];
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.8, gap: 2, yel: 0.5, travel: 0.42, from: b === 72 ? 8 : 0, to: f ? 12 : 16 });
+      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.8, gap: 2, yel: 0.5, travel: 0.42, from: b === 72 ? 8 : 0, to: peril72[b] ? 9 : f ? 12 : 16 });
       if (f) H.flurry(at(b, 3), f, 4, T.s16, { travel: 0.36 });
+      if (peril72[b]) H.peril(at(b, 3), { dir: peril72[b] });
       for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.6);
       if (b > 72) { H.dash(at(b) - 0.1, at(b) + 0.08, xs72[b - 72]); H.snap(at(b), { zoom: b % 2 ? 1.48 : 1.36, x: 480 + (xs72[b - 72] - 480) * 0.3, roll: (b % 2 ? -1 : 1) * 0.1 }); }
       if (b % 2 === 0) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 2), 3, { vol: 0.22 }); }
@@ -48,61 +62,137 @@
     H.say(at(76), at(78), ['你从我身上……', '什么也得不到！'], { cps: 14 });
     H.face(at(76), 6); H.face(at(78), 0);
 
-    // ------------------------------------------------------------ 80 - 87: the gauntlet
+    // ------------------------------------------------------------ 80 - 87: four spell cards (Touhou, in full)
     H.toRed(at(80), { camY: 246, zoom: 1.12 });
     H.bigHit(at(80), { flash: 0.35, flashCol: [1, 0.2, 0.2] });
+    TL.boss.to(at(80), at(80, 1), { pa: 0, tpa: 1 }, 'out');
+    H.tpWindow(at(80), at(87, 1), 0.6, 1);
     H.dash(at(80) - 0.1, at(80) + 0.06, 480);
-    H.fenceBar(80, [1, 2, 3], H.gaps(80, [1, 2, 3]), 'b');
-    H.fenceBar(81, [0, 1, 2, 3], H.gaps(81, [0, 1, 2, 3]), 't');
-    H.leap(at(80, 2), at(81), 340, 200, { fx: { flash: 0.12, amp: 8 }, rest: 2 });
-    H.leap(at(81, 2), at(82), 620, 200, { fx: { flash: 0.12, amp: 8 }, rest: 2 });
-    H.rain(82, 300, 660);
-    H.dash(at(83), at(83, 0, 2), 360);
-    H.soulTo(at(84) - 0.32, at(84) - 0.12, 480, MID, 'outExpo');
-    H.leap(at(83, 2), at(84), 480, 160, { fx: { flash: 0.15, amp: 9 }, rest: 2 });
-    H.ringAt(84, -1);
-    H.sweep(at(84, 3), MID - 46, 1); H.sweep(at(84, 3, 2), MID + 46, -1);
-    H.ringAt(85, 1);
-    H.sweep(at(85, 3), MID - 46, -1); H.sweep(at(85, 3, 2), MID + 46, 1);
-    H.beams(86, [0, 1, 2, 3], { x: 480 });
-    H.soulTo(at(86, 3) + 0.24, at(86, 3) + 0.34, 480, MID, 'outExpo');
-    for (const x of [300, 660]) for (const k of [1, 3]) H.wallSpear(at(86, k) - 0.3, at(86, k), k === 1 ? 'b' : 't', x, { len: 80, vol: 0.25 });
-    for (const k of [0, 1]) { H.sweep(at(87, k), TOP + 26, k ? 1 : -1, { warn: 0.2 }); H.sweep(at(87, k, 2), BOT - 26, k ? -1 : 1, { warn: 0.2 }); }
-    TL.und.to(at(85, 3), at(86), { eye: 1.6 }, 'inOut');
-    TL.shadow.to(at(86), at(86, 1), { eye: 2.4 }, 'inOut');
-    H.say(at(82), at(84), ['只要我还站着……'], { cps: 14 });
-    H.face(at(82), 9); H.face(at(84), 0);
-    for (let b = 80; b < 88; b++) for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.45);
-    H.barrage(at(82), 3, { vol: 0.22 }); H.barrage(at(84, 2), 3, { vol: 0.22 }); H.barrage(at(86), 3, { vol: 0.22 });
-    H.swell(at(88), 0.5);
+    for (let b = 80; b < 88; b++) { for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.4); H.throwArm(at(b, 1), 0.8); H.throwArm(at(b, 3), 0.8); }
 
-    // ------------------------------------------------------------ 88 - 93: green, the last storm
-    H.toGreen(at(88));
-    H.resetGreen('l');
-    H.bigHit(at(88), { flash: 0.5 });
-    H.shock(at(88), L.soul[0], L.soul[1], { r: 420, dust: false });
-    H.cam(at(88) - 0.3, at(88, 2), { x: 480, y: 232, zoom: 1.4, roll: 0, pitch: 0.15 }, 'inOut');
-    TL.rumble.to(at(88), at(88, 1), { v: 3 }, 'out');
-    const flur88 = { 89: 'r', 91: 'l' };
-    for (let b = 88; b < 94; b++) {
-      const f = flur88[b];
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.8, gap: 2, yel: 0.55, travel: 0.4, from: b === 88 ? 2 : 0, to: f ? 12 : 16 });
-      if (f) H.flurry(at(b, 3), f, 4, T.s16, { travel: 0.34 });
-      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.6);
-      H.swing(at(b), b % 2 ? 'red' : 'green', b % 2 === 1);
-      H.barrage(at(b, 2), 2, { vol: 0.2 });
-      if (b < 92) H.dash(at(b) - 0.1, at(b) + 0.08, [400, 560, 380, 580][b - 88]);
+    // 80 - 81 枪符「千本之矛」: two curtains of falling spears on every 16th, a corridor
+    // snaking between them; the soul rides the corridor
+    H.spell(at(80), at(81, 3, 3), '枪符「千本之矛」');
+    const cxAt = (s) => 480 + 150 * Math.sin((s / 32) * U.TAU), yC = MID + 18;
+    H.soulTo(at(80) - 0.12, at(80) - 0.02, cxAt(0), yC, 'outExpo');
+    for (let s = 1; s <= 29; s++) TL.soul.to(at(80, 0, s - 1), at(80, 0, s), { x: cxAt(s), y: yC }, 'lin');
+    for (let s = 2; s <= 28; s++) {
+      const tc = at(80, 0, s), yA = TOP - 70, yB = BOT + 80, f = (yC - yA) / (yB - yA), dur = 0.36;
+      for (const side of [-1, 1]) { const x = cxAt(s) + side * 54; H.flyer(tc - dur * f, tc - dur * f + dur, x, yA, x, yB, { len: 70, clip: true, sfx: s % 4 === 0 && side < 0, vol: 0.12 }); }
     }
-    for (let i = 0; i < 2; i++) H.cam(at(92 + i) - 0.12, at(92 + i) + 0.2, { roll: -(i + 1) * Math.PI / 2, pitch: 0.12 }, 'outExpo');
-    H.cam(at(94) - 0.3, at(94) + 0.2, { roll: -Math.PI, pitch: 0 }, 'outExpo');
-    H.cut(at(95) - 0.001, { roll: 0 });
-    H.cam(at(94), at(95), { zoom: 1.55, y: 262 }, 'inOut');
-    H.dash(at(92) - 0.1, at(92) + 0.08, 480);
-    H.speed(at(92), at(96), { k: 0.55 });
+    // 82 - 83 水符「瀑布之雨・极」: a lattice - columns fall on every beat, rows sweep across;
+    // the columns shift half a cell each beat and the soul steps into the new cell
+    H.spell(at(82), at(83, 3, 3), '水符「瀑布之雨·极」');
+    const cells = [434, 480, 526, 572, 526, 480, 434, 388];
+    H.soulTo(at(82) - 0.18, at(82) - 0.08, cells[0], MID, 'outExpo');
+    for (let k = 0; k < 8; k++) {
+      const b = 82 + (k >> 2), kk = k % 4, tc = at(b, kk), even = k % 2 === 0;
+      const yA = TOP - 70, yB = BOT + 80, f = (MID - yA) / (yB - yA), dur = 0.36;
+      for (let x = even ? 296 : 342; x <= 690; x += 92) H.flyer(tc - dur * f, tc - dur * f + dur, x, yA, x, yB, { len: 80, clip: true, sfx: false });
+      H.sfx(tc, 'UndSpearRise', 0.35); H.punch(tc, 0.5);
+      H.sweep(tc, MID - 44, k % 2 ? 1 : -1, { warn: 0.15, dur: 0.45 });
+      H.sweep(tc + T.s16 * 2, MID + 44, k % 2 ? -1 : 1, { warn: 0.15, dur: 0.45 });
+      if (k < 7) H.soulTo(tc + 0.13, tc + 0.21, cells[k + 1], MID, 'outExpo');
+    }
+    // 84 - 85 矛符「绽放」: spear flowers burst from the box's edges, two a stop; the soul
+    // always sits in a gap between the petals, and moves on between bursts
+    H.spell(at(84), at(85, 3, 3), '矛符「绽放」');
+    const spots = [[400, 362], [566, 346], [470, 398], [356, 332]];
+    const centres = [[262, 296], [698, 414], [698, 296], [262, 414], [480, 292], [262, 300], [698, 300], [480, 420]];
+    spots.forEach(([x, y], i) => {
+      const t = at(84 + (i >> 1), (i % 2) * 2);
+      H.soulTo(t - 0.3, t - 0.18, x, y, 'outExpo');
+      H.bloom(t, ...centres[i * 2], 12, { clip: true, v: 950 });
+      H.bloom(t, ...centres[i * 2 + 1], 12, { clip: true, v: 950 });
+      H.punch(t + T.beat, 0.6); H.pulse(t + T.beat, 0.4, '#5fd8ff');
+    });
+    // 86 - 87 决心「不死之身」: the last spell - eye beams on every beat with a flower from her
+    // hand on top; then 24 spears close in from everywhere. The TP is full: the soul breaks them.
+    H.spell(at(86), at(87, 1, 2) + 0.2, '决心「不死之身」', { r: 180 });
+    H.beams(86, [0, 1, 2, 3], { x: 480 });
+    for (const k of [0, 2]) H.bloom(at(86, k), 480, 238, 12, { v: 900 });
+    const tRing = at(87), tBurst = at(87, 1, 2);
+    H.soulTo(at(86, 3) + 0.24, at(86, 3) + 0.34, 480, MID, 'outExpo');
+    H.sfx(tRing, 'UndSpearAppear', 0.5); H.sfx(tRing, 'Warning', 0.35);
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * U.TAU;
+      TL.add({
+        t0: tRing, t1: tBurst, z: 30,
+        draw(ctx, emi, t, S) {
+          const u = U.clamp((t - tRing) / (tBurst - tRing)), r = U.lerp(150, 46, U.eIn(u)) + Math.sin(t * 30 + i) * 2;
+          D.spear(ctx, emi, S.soul.x + Math.cos(a) * r, S.soul.y + Math.sin(a) * r, a + Math.PI, { len: 60, alpha: U.clamp((t - tRing) / 0.12) });
+        },
+      });
+    }
+    // TP burst (Deltarune): the bar empties into a green wave; every spear shatters
+    H.sfx(tBurst, 'Heal', 0.6); H.sfx(tBurst, 'Shock', 0.55); H.sfx(tBurst, 'UndBreak1', 0.5);
+    H.bigHit(tBurst, { flash: 0.6, flashCol: [0.5, 1, 0.6] });
+    TL.boss.to(tBurst, tBurst + 0.4, { tp: 0 }, 'inOut');
+    H.shock(tBurst, 480, MID, { r: 300, color: '#80ff90', color2: '#00c000', dust: false });
+    TL.burst(tBurst, { x: 480, y: MID, n: 80, speed: [140, 420], life: [0.25, 0.6], colors: ['#ffffff', '#9fe8ff', '#80ff90'], size: [2, 3], z: 45 });
+    H.caption(tBurst, tBurst + 0.9, 'TP 100% · 决心', 480, 300, { scale: 2, color: '#80ff90', fadeIn: 0.05 });
+
+    // ------------------------------------------------------------ 88 - 93: the box shatters (JSAB)
+    // her spear splits the cracked box; the whole screen is the arena now. Walls of spears,
+    // spear flowers from the screen's edges, giant spears across it - the soul has room to run.
+    const tS = at(88);
+    TL.boss.to(at(87, 3), tS, { crack: 1 }, 'in');
+    H.shatter(tS);
+    H.cutin(at(87, 2, 2), 0.55, { text: '给我碎！！', head: 12 });
+    TL.hud.to(tS, tS + 0.3, { a: 0 }, 'out');
+    TL.btn.forEach((b) => b.to(tS, tS + 0.3, { a: 0 }, 'out'));
+    TL.boss.to(tS, tS + 0.3, { tpa: 0 }, 'out');
+    H.cam(tS - 0.05, tS + 0.25, { x: 480, y: 270, zoom: 1, roll: 0, pitch: 0, yaw: 0 }, 'outExpo');
+    TL.post.to(tS, tS + 0.4, { bloom: 1.4, ca: 1.3, vig: 0.3 }, 'out');
+    TL.rumble.to(tS, tS + 0.3, { v: 2.2 }, 'out');
+    TL.und.to(tS, tS + 0.4, { ghost: 0.5 }, 'out');
+    for (let b = 88; b < 94; b++) for (const s of H.hits(b, 'kick', 0.8)) { H.pulse(at(b, 0, s), 0.8); H.punch(at(b, 0, s), 0.4); }
+    // 88 - 89: walls on every beat, gaps follow the melody
+    const gapY = [330, 470, 360, 446, 318, 488, 400];
+    let prevY = 352;
+    gapY.forEach((gy, i) => {
+      const k = i + 1, tc = at(88 + (k >> 2), k % 4);
+      const tm = i === 0 ? tS + 0.1 : at(88 + ((k - 1) >> 2), (k - 1) % 4) + 0.06;
+      H.soulTo(tm, tm + 0.1, 480, gy, 'outExpo');
+      H.wall(tc, i % 2 ? -1 : 1, gy);
+      H.throwArm(tc - 0.1, 0.8);
+      prevY = gy;
+    });
+    // 90 - 91: flowers from the screen edges, the soul in the gaps
+    const spots2 = [[380, 420], [586, 400], [480, 476], [350, 360]];
+    const centres2 = [[60, 300], [900, 520], [900, 300], [80, 520], [480, 230], [60, 470], [900, 300], [480, 230]];
+    spots2.forEach(([x, y], i) => {
+      const t = at(90 + (i >> 1), (i % 2) * 2);
+      H.soulTo(t - 0.3, t - 0.18, x, y, 'outExpo');
+      H.bloom(t, ...centres2[i * 2], 14, { v: 1100, len: 70 });
+      H.bloom(t, ...centres2[i * 2 + 1], 14, { v: 1100, len: 70 });
+    });
+    // 92 - 93: giant spears across the screen on the beats, the soul circling
+    const orbit = (t) => { const u = (t - at(92)) / (T.bar * 2) * U.TAU; return [480 + Math.cos(u) * 110, 410 + Math.sin(u) * 60]; };
+    H.soulTo(at(92) - 0.3, at(92) - 0.1, ...orbit(at(92)), 'outExpo');
+    for (let s = 1; s <= 27; s++) { const t = at(92, 0, s); TL.soul.to(t - T.s16, t, Object.fromEntries([['x', orbit(t)[0]], ['y', orbit(t)[1]]]), 'lin'); }
+    for (let k = 0; k < 7; k++) {
+      const tc = at(92 + (k >> 2), k % 4), [sx, sy] = orbit(tc), ang = [0.45, -0.45, 1.2, -1.2, 0.2, -0.7, 0.9][k];
+      const nx = -Math.sin(ang), ny = Math.cos(ang), side = k % 2 ? 1 : -1;
+      const px = sx + nx * 104 * side, py = sy + ny * 104 * side, Lh = 900, v = 2000;
+      H.flyer(tc - Lh / v, tc + Lh / v, px - Math.cos(ang) * Lh, py - Math.sin(ang) * Lh, px + Math.cos(ang) * Lh, py + Math.sin(ang) * Lh, { len: 300, scale: 2.2, width: 16, warn: 0.45, warnW: 18, warnA: 0.22, vol: 0.35, z: 32 });
+      H.punch(tc, 0.9);
+    }
+    H.barrage(at(92), 3, { vol: 0.2 }); H.barrage(at(93), 3, { vol: 0.2 });
+    H.say(at(89), at(90, 2), ['我不会……', '输给你的！'], { cps: 14 });
+    H.face(at(89), 2); H.face(at(90, 2), 6);
+    // 93: the box pulls itself back together round the soul
+    H.soulTo(at(93, 3) - 0.1, at(93, 3) + 0.1, L.soul[0], L.soul[1], 'outExpo');
+    TL.box.set(at(93, 3), Object.assign({ draw: 0, fill: 0 }, L.boxGreen)).to(at(93, 3), at(93, 3, 2), { draw: 1 }, 'outExpo');
+    H.sfx(at(93, 3), 'UndSelect', 0.5);
+    TL.hud.to(at(93, 3), at(94), { a: 1 }, 'out');
+    TL.btn.forEach((b) => b.to(at(93, 3), at(94), { a: 1 }, 'out'));
+    TL.soulCol.set(at(94) - 0.02, 'green');
+    H.sfx(at(94), 'Ding', 0.5);
+    TL.shield.to(at(94) - 0.02, at(94) + 0.1, { a: 1 }, 'out');
+    H.cam(at(94), at(95), { x: 480, y: 262, zoom: 1.5 }, 'inOut');
     TL.post.to(at(92), at(95), { bloom: 1.5, ca: 1.6 }, 'inOut');
-    TL.rumble.to(at(92), at(95, 3), { v: 4.5 }, 'in');
-    H.say(at(89), at(91), ['我不会……', '输给你的！'], { cps: 14 });
-    H.face(at(89), 2); H.face(at(91), 6);
+    TL.rumble.to(at(93), at(95, 3), { v: 4.5 }, 'in');
 
     // ------------------------------------------------------------ 94 - 95: the ring, then the fill
     // twelve spears gather round the soul through bar 94 (they hover, drawn here), then on
@@ -137,6 +227,10 @@
     H.sfx(tEnd - 0.04, 'Swipe', 0.6);
     TL.add({ t0: tEnd - 0.05, t1: tEnd + 0.6, z: 55, draw(ctx, emi, t, S) { D.slash(ctx, emi, S.und.x + 4, S.und.y - 150, (t - tEnd + 0.05) / 0.6, { len: 220, w: 16 }); } });
     H.bigHit(tEnd + 0.1, { flash: 1, inv: 0.07, bw: 0.05, amp: 22 });
+    // the final blow (Smash): the frame holds on a blue-white burst; the bar empties for good
+    H.freeze(tEnd + 0.26, 0.7, { smash: true, zoom: 0.2, cy: 230 });
+    H.bossHp(tEnd + 0.15, 0, { dur: 0.5, ease: 'inOut', lagDelay: 0.9 });
+    TL.boss.to(tEnd + 1.0, tEnd + 1.3, { lives: 0, posture: 0, pa: 0 }, 'inOut').to(tEnd + 2.2, tEnd + 3.0, { a: 0 }, 'inOut');
     H.shock(tEnd + 0.1, 480, 150, { r: 600, dust: false });
     H.speed(tEnd + 0.1, tEnd + 0.9, { k: 1, cy: 200 });
     TL.rumble.set(tEnd + 0.1, { v: 8 }).to(tEnd + 0.1, tEnd + 2.5, { v: 0 }, 'out');

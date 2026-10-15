@@ -121,6 +121,29 @@
         o[i] = v * 0.5 + hp.run(nz()) * env(t, 0.0005, 60) * 0.9;
       }
     }),
+    // the perilous-attack warning: a bright ringing strike over a low thud
+    Peril: hit(0.9, 41, 0.85, (o, sr, nz) => {
+      const b = glide(sr, 110, 55, 0.05), fs = [1760, 2637, 3520];
+      for (let i = 0; i < o.length; i++) {
+        const t = i / sr; let v = 0;
+        fs.forEach((f, k) => { v += Math.sin(TAU * f * t + k) * Math.exp(-t * (4 + k * 2)); });
+        o[i] = v * 0.35 + b(t) * env(t, 0.002, 9) * 0.8 + nz() * env(t, 0.0005, 80) * 0.4;
+      }
+    }),
+    // a graze: a short airy brush with a bright tick on top
+    Graze: hit(0.12, 43, 0.5, (o, sr, nz) => {
+      const bp = biquad(sr).set('bp', 5200, 1.4);
+      for (let i = 0; i < o.length; i++) { const t = i / sr; o[i] = bp.run(nz()) * env(t, 0.002, 40) + Math.sin(TAU * 2960 * t) * env(t, 0.0005, 70) * 0.4; }
+    }),
+    // a temple gong for the deathblow
+    Gong: hit(2.6, 47, 0.9, (o, sr, nz) => {
+      const fs = [98, 147, 196, 262, 331, 415];
+      for (let i = 0; i < o.length; i++) {
+        const t = i / sr; let v = 0;
+        fs.forEach((f, k) => { v += Math.sin(TAU * f * t * (1 + 0.002 * Math.sin(TAU * 3 * t)) + k) * Math.exp(-t * (0.9 + k * 0.5)) / (1 + k * 0.3); });
+        o[i] = v * 0.6 + nz() * env(t, 0.001, 30) * 0.3;
+      }
+    }),
     // low rumble under the dust and the transformation
     Rumble: hit(2.4, 31, 0.6, (o, sr, nz) => {
       const lp = biquad(sr).set('lp', 120);

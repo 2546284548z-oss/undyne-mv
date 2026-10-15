@@ -81,6 +81,10 @@
       H.punch(t, 0.5, { dy: 1 });
     }
     for (const [b, k] of [[4, 3], [5, 1], [5, 3], [6, 1]]) H.barrage(at(b, k), 2, { vol: 0.25 });
+    // the boss bar (Souls): her name and two lives (Sekiro) appear, the bar charges up
+    TL.boss.set(at(4, 1), { a: 0, hp: 0, lag: 0 }).to(at(4, 1), at(4, 2), { a: 1 }, 'out');
+    TL.boss.to(at(4, 2), at(5), { hp: 1, lag: 1 }, 'inOut');
+    H.sfx(at(4, 2), 'Power', 0.45);
     H.narrate(at(5), at(6), ['* 安黛因挡住了去路。'], { cps: 22 });
     H.say(at(5, 1), at(6, 2), ['你以为……', '这样就能杀死我？'], { cps: 16 });
     H.face(at(5, 1), 9); H.face(at(6, 2), 0);

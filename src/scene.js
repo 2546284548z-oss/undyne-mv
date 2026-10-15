@@ -45,6 +45,7 @@
       shield: Object.assign(TL.shield.at(t), { hit: sh }),
       und: TL.und.at(t), show: TL.uShow.at(t), head: TL.head.at(t), melt: TL.melt.at(t),
       shadow: TL.shadow.at(t), rage: TL.rage.at(t).v,
+      boss: TL.boss.at(t), bossName: TL.bossName.at(t),
       hud: TL.hud.at(t),
       btn: TL.btn.map((b) => b.at(t)),
       bg: TL.bg.at(t),
@@ -93,10 +94,12 @@
       layer(0, 10, (e) => e.clip === 'box');
       ctx.restore(); emi.restore();
       D.box(ctx, emi, b);
+      D.cracks(ctx, emi, b, S.boss.crack, t);
       this.drawHud(S, t);
       layer(0, 40, (e) => e.clip !== 'box');
       this.drawSoul(S, t);
       layer(40, 1000);
+      D.bossHud(sctx, S, t);
       for (const e of evs) if (e.screen) e.draw(sctx, null, t, S);
       // bloom sources: quarter + eighth resolution blurs
       const { gA, gB } = this;
@@ -146,6 +149,8 @@
           D.undyne(ctx, null, p.x + jx, p.y + jy, Object.assign({}, o, { sil: k % 2 ? '#2a6bff' : '#5fd8ff', alpha: u.ghost * (0.5 - k * 0.12) * u.a, glow: 0, eye: 0 }));
         }
       D.undyne(ctx, emi, u.x + jx, u.y + jy, o);
+      // Sekiro's deathblow mark on her chest once her posture breaks
+      if (S.boss.mark > 0.01) { const [mx, my] = D.undynePt(u.x + jx, u.y + jy, 52, 70, u.sc); D.deathMark(ctx, emi, mx, my, S.boss.mark, t); }
     }
     drawHud(S, t) {
       const { ctx, emi } = this;
