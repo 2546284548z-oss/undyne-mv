@@ -1,0 +1,15 @@
+dist/
+node_modules/
+__pycache__/
+.venv/
+work/
+output/
+*.mp4
+*.mov
+*.webm
+*.wav
+!asset/sfx/*.wav
+*.zip
+*.log
+.env
+.env.*

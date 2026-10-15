@@ -1,0 +1,15 @@
+{
+  "name": "undyne-mv",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "Battle Against a True Hero pixel MV player",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2546284548z-oss/undyne-mv.git"
+  },
+  "scripts": {
+    "build": "node tools/build.cjs",
+    "start": "node tools/serve.cjs",
+    "check:mv": "node tools/check.cjs"
+  }
+}
