@@ -105,6 +105,7 @@
     H.face(at(25), 2); H.face(at(25, 2), 0);
 
     // ------------------------------------------------------------ 27: the first turn
+    H.band(at(26, 3, 2), true); H.band(at(27, 3, 2), false); // the FIGHT turn
     TL.shield.to(at(27), at(27, 0, 2), { a: 0 }, 'out');
     TL.und.to(at(26, 3), at(27), { ghost: 0 }, 'inOut');
     TL.rumble.to(at(27), at(27, 1), { v: 0.5 }, 'out');

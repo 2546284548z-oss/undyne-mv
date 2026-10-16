@@ -415,14 +415,14 @@
   // the dark and meets the shield arc at the edge of the view. An iris opens from the soul at t0
   // and closes back into it at t1, where the flat 2D picture takes over again.
   H.firstPerson = (t0, t1, o = {}) => {
-    const R0 = 160, f = 300, far = 2400, top = MV.SAFE.top, bot = 540 - MV.SAFE.bot;
+    const R0 = 160, f = 300, far = 2400, top = MV.SAFE.top;
     const SIDE = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
     H.sfx(t0, 'Whoosh', 0.6); H.sfx(t0, 'Shimmer', 0.4);
     TL.impact(t0, { amp: 0, flash: 0.8, dur: 0.35 });
     TL.add({
       t0, t1: t1 + 0.2, z: 87, screen: true,
       draw(c, emi, t, S) {
-        const fx = S.fx, sx = fx.sx * 1.5, sy = fx.sy * 1.5;
+        const fx = S.fx, sx = fx.sx * 1.5, sy = fx.sy * 1.5, bot = 540 - S.frame.bot;
         const cx = 480 + sx, cy = 266 + sy;
         const rIn = 1000 * U.eOutExpo(U.clamp((t - t0) / 0.28)), rOut = t > t1 ? 1000 * (1 - U.eIn(U.clamp((t - t1) / 0.18))) : 1000;
         const ir = Math.min(rIn, rOut);

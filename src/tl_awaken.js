@@ -111,6 +111,7 @@
     TL.soul.to(at(7), at(7) + 0.02, { sc: 1.8 }, 'lin').to(at(7) + 0.02, at(7, 0, 3), { sc: 1 }, 'out');
     TL.burst(at(7), { x: L.soul[0], y: L.soul[1], n: 30, speed: [80, 300], life: [0.2, 0.5], colors: ['#00ff40', '#ffffff'], size: [2, 3], z: 36 });
     H.shout(at(7), at(7, 3), '别想逃！！', { y: 70 });
+    H.band(at(7, 0, 2), false); // she attacks now: the HUD band drops away
     TL.rumble.to(at(7), at(7, 1), { v: 1.5 }, 'out');
 
     // ------------------------------------------------------------ 7 - 10: spears on the 8ths

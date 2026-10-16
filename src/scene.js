@@ -24,8 +24,9 @@
     if (sw > 0.001) {
       const u = TL.und.at(t), bx = TL.box.at(t), so = TL.soul.at(t);
       const wTop = u.a > 0.3 ? Math.max(u.y, L.und[1]) - 118 * u.sc - 20 : 40;
-      const wBot = bx.draw > 0.5 ? bx.y + bx.h + 16 : so.a > 0.5 ? 524 : u.y + 24;
-      const sTop = MV.SAFE.top + 6, sBot = 540 - MV.SAFE.bot - 6;
+      // green: leave room under the box so spears rising from below are seen the whole way in
+      const wBot = bx.draw > 0.5 ? bx.y + bx.h + (TL.soulCol.at(t) === 'green' ? 120 : 16) : so.a > 0.5 ? 524 : u.y + 24;
+      const sTop = TL.frame.at(t).top + 6, sBot = 540 - TL.frame.at(t).bot - 6;
       const z = Math.min(cam.zoom, (sBot - sTop) / Math.max(40, wBot - wTop));
       const hi = wTop + (270 - sTop) / z, lo = wBot - (sBot - 270) / z;
       const y = lo <= hi ? U.clamp(cam.y, lo, hi) : (lo + hi) / 2;

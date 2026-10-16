@@ -57,6 +57,9 @@
   TL.sfx = [];
   const sfxLast = {};
   const H = (MV.H = {});
+  // the bottom band (the player's HUD) only rises for the player's own moments - the opening,
+  // each FIGHT turn, the last blow - and drops away while she attacks
+  H.band = (t, show, dur = 0.28) => TL.frame.to(t, t + dur, { bot: show ? MV.SAFE.bot : 0 }, show ? 'outBack' : 'in');
   H.sfx = (t, name, vol = 1) => {
     // limiter: one trigger of the same sound per 40 ms
     const k = name + Math.round(t / 0.04);
@@ -104,7 +107,8 @@
   TL.greens = [];
   H.ARROW = 1.9; // arrow-spear size (the game's 1x reads too small in the MV's framing)
   H.green = (tHit, side, o = {}) => {
-    const kind = o.kind || 'blue', travel = o.travel || 0.48, dist = o.dist || 400;
+    // spears from below start nearer: the picture ends a little under the box
+    const kind = o.kind || 'blue', travel = o.travel || 0.48, dist = o.dist || ((kind === 'yel' ? (o.turn || OPP[side]) : side) === 'd' || side === 'd' ? 190 : 400);
     const stop = D.SHIELD_R + 3; // tip distance from the soul at the block
     const final = kind === 'yel' ? o.turn || OPP[side] : side;
     const t0 = tHit - travel;
@@ -343,7 +347,7 @@
         // keep the bubble inside the picture (between the letterbox bands)
         const c = S.cam, z = c.zoom || 1;
         x = U.clamp(x, c.x - 468 / z, c.x + 468 / z - w);
-        y = U.clamp(y, c.y + (MV.SAFE.top + 8 - 270) / z, c.y + (540 - MV.SAFE.bot - 8 - 270) / z - h);
+        y = U.clamp(y, c.y + (S.frame.top + 8 - 270) / z, c.y + (540 - S.frame.bot - 8 - 270) / z - h);
         D.bubble(ctx, x, y, w, h, shown, { tx: ex + 30, ty: ey + 10, alpha: out, scale: sc, pop: 0.85 + 0.15 * U.eOutBack(U.clamp((t - t0) / 0.15)) });
       },
     });

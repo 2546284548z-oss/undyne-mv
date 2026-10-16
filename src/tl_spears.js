@@ -294,6 +294,7 @@
     TL.rumble.to(at(59), at(59, 1), { v: 0.6 }, 'out');
     H.cam(at(59), at(59, 1), { x: 480, y: 258, zoom: 1.14, pitch: 0, yaw: 0, roll: 0 }, 'inOut');
     TL.post.to(at(59), at(59, 1), { bloom: 1, ca: 0.6, bg: 0 }, 'inOut');
+    H.band(at(59) - 0.15, true); H.band(at(59, 3, 3), false);
     H.turn(at(59), at(59, 1), 3864, 0.86, 0.52, { big: true, after: 6, hurt: 0.6, show: 0.56 });
     // the deathblow (Sekiro) with a longer hit-stop (Smash): the bar empties, a life goes out,
     // the box cracks wider

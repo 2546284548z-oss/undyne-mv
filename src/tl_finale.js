@@ -242,6 +242,7 @@
     const tEnd = at(96);
     TL.shield.to(tEnd, tEnd + 0.1, { a: 0 }, 'out');
     TL.soul.to(tEnd, tEnd + 0.3, { sc: 1 }, 'out');
+    H.band(at(95, 3), true); // the last FIGHT; the band stays for the ring-out and the epilogue
     TL.btn[0].set(at(95, 3, 2), { sel: 1 }).set(tEnd + 0.2, { sel: 0 });
     H.sfx(tEnd - 0.04, 'Swipe', 0.6);
     TL.add({ t0: tEnd - 0.05, t1: tEnd + 0.6, z: 55, draw(ctx, emi, t, S) { D.slash(ctx, emi, S.und.x + 4, S.und.y - 150, (t - tEnd + 0.05) / 0.6, { len: 220, w: 16 }); } });
