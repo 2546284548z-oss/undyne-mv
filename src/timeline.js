@@ -388,7 +388,7 @@
   H.say = (t0, t1, lines, o = {}) => {
     const cps = o.cps || 18, n = lines.join('').length;
     const tType = n / cps;
-    for (let i = 0; i < n; i += 2) H.sfx(t0 + i / cps, 'Blip', o.vol ?? 0.18);
+    for (let i = 0; i < n; i += 2) H.sfx(t0 + i / cps, 'Blip', o.vol ?? 0.18, o.rate); // rate: a higher voice
     const sc = o.scale || 1;
     const w = o.w || Math.max(...lines.map((l) => D.textWidth(l, { scale: sc }))) + 20 * sc, h = lines.length * 18 * sc + 14 * sc;
     return TL.add({

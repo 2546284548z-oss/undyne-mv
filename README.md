@@ -1,8 +1,8 @@
 # BATTLE AGAINST A TRUE HERO · 像素 MV
 
-基于 UNDERTALE 曲目 *Battle Against a True Hero*（150 BPM）编排的像素演出：不死的安黛因之战。无构建步骤，打开 `index.html` 即可播放，全片 2 分 57.8 秒。
+基于 UNDERTALE 曲目 *Battle Against a True Hero*（150 BPM）编排的像素演出：不死的安黛因之战。无构建步骤，打开 `index.html` 即可播放，全片 3 分 13.8 秒。
 
-**成片下载：[video/undyne_mv_v7_720p60.mp4](video/undyne_mv_v7_720p60.mp4)**（第七版 · 二阶段威压版，1280×720 **60fps**，2:57.8，已混入音乐与音效；在 GitHub 页面点 “Download raw file” 下载）
+**成片下载：[video/undyne_mv_v8_720p60.mp4](video/undyne_mv_v8_720p60.mp4)**（第八版 · 加入前置过场，1280×720 **60fps**，3:13.8，已混入音乐与音效；在 GitHub 页面点 “Download raw file” 下载）
 
 做法沿用 [guiguisocute/mtt-mv-pub](https://github.com/guiguisocute/mtt-mv-pub)（镁塔顿演出战）：Canvas 像素世界 + WebGL 后期，所有画面都是时间的纯函数，按音乐分析出的拍点编舞；导出时用无头 Chromium 逐帧渲染再用 ffmpeg 编码，不用任何视频模型。
 
@@ -87,9 +87,9 @@ node tools/render.cjs --workers=4                             # 纯 CPU（SwiftS
 
 | 幕 | 视频时间 | 声音 | 内容 |
 | --- | --- | --- | --- |
-| 一 · 挡下 | 0 – 9 s | 静默，只有音效 | 瀑布的桥上，她替孩子挡下一刀 → 开始融化 →「我还不能倒下！」→ 心跳、白光吞没画面 |
-| 二 · 不死 | 9 – 165.8 s | 全曲 98 小节 | 见下方分镜 |
-| 三 · 尘埃 | 165.8 – 177.8 s | 静默 | 最后的话 → 由上而下化作尘埃 →「* 她坚持到了最后一刻。」 |
+| 一 · 挡下 | 0 – 25 s | 静默，只有音效 | **前置过场（0–14.6 s，原版行走图）**：屠杀线，瀑布的长桥上怪物们都已逃走；怪物小孩挡在路中间「哟……我知道我只是个小孩……但我不会让你伤害任何人！」→ 那张微笑的脸 → 主角挥刀，安黛因从天而降挡在孩子身前，一刀砍中、倒下 →「……快……跑……孩子……」小孩逃走 → 黑屏、灵魂闪烁、进入战斗。**战斗特写（14.6–25 s）**：伤口裂开「想打倒我……你还得再加把劲才行！」→ 开始融化 →「我还不能倒下！」→ 心跳、白光吞没画面 |
+| 二 · 不死 | 25 – 181.8 s | 全曲 98 小节 | 见下方分镜 |
+| 三 · 尘埃 | 181.8 – 193.8 s | 静默 | 最后的话 → 由上而下化作尘埃 →「* 她坚持到了最后一刻。」 |
 
 ## 分镜（第二幕）
 
@@ -151,7 +151,7 @@ src/scene.js post.js       画面合成、黑边与 HUD、自动避让；WebGL 3
 src/homage.js              游戏致敬 + 3D：玻璃碎屏、第一人称；Boss 血条 / 命 / 架势 / 危 / 忍杀、顿帧与定格、符卡与魔法阵、擦弹与 TP、框的裂痕与碎裂、全屏矛墙与矛花
 src/timeline.js            编舞工具：绿魂长矛 + 自动转盾 + 格挡冲击、红魂地刺 / 矛墙 / 飞矛 / 矛环 / 光束、
                            Boss 动作（猛扑 / 跳跃砸地 / 冲刺 / 怒吼）、特写插画、大字台词、速度线、背景巨矛、对白、战斗回合
-src/tl_prologue.js         第一幕：挡下（静默）
+src/tl_prologue.js         第一幕：前置过场（原版行走图）+ 战斗特写（静默）
 src/tl_awaken.js           0–11
 src/tl_shield.js           12–27（含长矛生成器）
 src/tl_spears.js           28–59
@@ -180,4 +180,5 @@ node tools/render.cjs                                # 导出成片
 ## 素材来源与许可
 
 - 安黛因精灵表、战斗 UI、音效与原曲 *Battle Against a True Hero* 的版权归 Toby Fox / UNDERTALE 所有；精灵表与部分音效取自 [xFN10x/True-Hero-Simulator](https://github.com/xFN10x/True-Hero-Simulator)，战斗 UI 与其余音效取自 mtt-mv-pub 的打包资源。本项目为非商业同人作品，MIT 不覆盖这些素材。
+- 前置过场的行走图（主角、怪物小孩、穿盔甲的安黛因）取自 [davidcarmonaarrabal/UTDRSpriteWeb](https://github.com/davidcarmonaarrabal/UTDRSpriteWeb)，那里是平滑放大过的版本；`asset/ow/` 里是按原始像素网格还原后的像素图，版权同样归 Toby Fox / UNDERTALE。
 - 引擎、后期、导出与工具改编自 [guiguisocute/mtt-mv-pub](https://github.com/guiguisocute/mtt-mv-pub)（MIT）；本仓库代码同样以 [MIT](LICENSE) 授权。

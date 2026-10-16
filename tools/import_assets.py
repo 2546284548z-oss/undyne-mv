@@ -141,6 +141,11 @@ IMG['spear/big_u'] = trim(crop(31, 1094, 22, 62))
 IMG['spear/big_r'] = trim(crop(58, 1114, 62, 22))
 IMG['swing/red'] = trim(crop(28, 848, 271, 121))
 IMG['swing/green'] = trim(crop(336, 848, 271, 121))
+# overworld sprites for the prologue cutscene (the bridge in Waterfall, Genocide): recovered to
+# their native pixel grid from smooth-upscaled copies (UTDRSpriteWeb), see README
+for f in sorted(os.listdir('asset/ow')):
+    if f.endswith('.png'):
+        IMG['ow/' + f[:-4]] = Image.open('asset/ow/' + f).convert('RGBA')
 
 # ---------------------------------------------------------------- sounds
 SFX = {}

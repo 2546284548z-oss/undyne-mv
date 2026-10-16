@@ -18,8 +18,9 @@
   // ------------------------------------------------------------ the backdrop
   const T0 = at(90), scroll = (t) => (t - T0) * V;
   const wrap = (x, w) => ((x % w) + w) % w;
-  D.chase = (ctx, emi, t, k) => {
-    const s = scroll(t), X0 = -MV.PADX, W = MV.VW + MV.PADX * 2, Y0 = -MV.PADY, Hh = MV.VH + MV.PADY * 2;
+  // sc: a fixed scroll position (the prologue's still bridge); default: running with the chase
+  D.chase = (ctx, emi, t, k, sc) => {
+    const s = sc ?? scroll(t), X0 = -MV.PADX, W = MV.VW + MV.PADX * 2, Y0 = -MV.PADY, Hh = MV.VH + MV.PADY * 2;
     D.rect(ctx, X0, Y0, W, Hh, '#040918', k);
     // the far cavern wall: stepped silhouettes (slow), crystals in it
     for (let i = 0; i < 14; i++) {

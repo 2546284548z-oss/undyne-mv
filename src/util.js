@@ -45,7 +45,7 @@
   const T = (MV.T = {
     A,
     bpm: A.bpm,
-    pre: 9,
+    pre: 25,
     s16: A.sixteenth,
     beat: A.sixteenth * 4,
     bar: A.barLength,
