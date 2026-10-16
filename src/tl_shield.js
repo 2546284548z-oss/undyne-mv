@@ -47,7 +47,7 @@
       if (parry) parried = true;
       H.green(t, side, {
         kind: yel ? 'yel' : 'blue', travel: o.travel, dist: o.dist, heavy: strong && o.heavy !== false, deflect: parry,
-        hitVol: fill ? 0.3 : burst ? 0.38 : o.vol, vol: fill || burst ? 0.05 : undefined, fill,
+        hitVol: fill || (burst && s > o.burst[0]) ? 0 : o.vol, vol: fill || burst ? 0.05 : undefined, fill,
       });
       out.push({ t, side });
       prev = { side: yel ? { u: 'd', d: 'u', l: 'r', r: 'l' }[side] : side, pitch: p > 0 ? p : prev.pitch, t, s16: s };

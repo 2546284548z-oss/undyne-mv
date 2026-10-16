@@ -50,7 +50,7 @@
   // sections register builders; they run after the assets are loaded
   MV.sections = [];
   MV.late = [];
-  MV.buildTimeline = () => { MV.sections.forEach((f) => f()); H.buildShield(); H.buildPosture(); H.buildLadder(); };
+  MV.buildTimeline = () => { MV.sections.forEach((f) => f()); H.buildShield(); H.buildPosture(); };
 
   // ---------------------------------------------------------------- sound effects
   // {t, name, vol}: played live through WebAudio and mixed into the export
@@ -144,8 +144,9 @@
     if (kind === 'yel') H.sfx(tTurn, 'UndArrow', 0.35);
     H.sfx(t0, 'UndSpearAppear', o.vol ?? 0.12);
     const heavy = o.heavy || kind === 'yel';
-    // the block bell is retuned later (H.buildLadder: it climbs through each bar)
-    const hit = { t: tHit, side: final, heavy, fill: !!o.fill, block: H.sfx(tHit, 'Block', o.hitVol ?? 0.5) };
+    // hitVol 0: a silent block (the extra density layers stay out of the music's way)
+    const hv = o.hitVol ?? 0.5;
+    const hit = { t: tHit, side: final, heavy, fill: !!o.fill, block: hv > 0 ? H.sfx(tHit, 'Block', hv) : null };
     TL.shieldHits.push(hit);
     if (o.deflect) H.deflect(hit, kind);
     if (o.stop) H.freeze(tHit, o.stop, { zoom: 0.025 }); // a micro hit-stop on the heaviest blocks
@@ -225,18 +226,6 @@
   MV.late.push(() => {
     for (const h of TL.deflects) { const f = TL.head.at(h.tA - 0.001); if (f !== 14) { TL.head.set(h.tA, 14); if (TL.head.at(h.tA + 0.24) === 14) TL.head.set(h.tA + 0.24, f); } }
   });
-  // the block bells climb a ladder through each bar (C2): F minor pentatonic, from the C below
-  // (the bell is an F#, so every step is shifted a semitone down into the song's key)
-  H.LADDER = [-5, -2, 0, 3, 5, 7, 10, 12];
-  H.buildLadder = () => {
-    let bar = -1, i = 0;
-    for (const h of TL.shieldHits.slice().sort((a, b) => a.t - b.t)) {
-      const b = Math.floor(T.barOf(h.t) + 0.03);
-      if (b !== bar) { bar = b; i = 0; }
-      const st = H.LADDER[Math.min(i++, H.LADDER.length - 1)] - 1;
-      if (h.block) h.block.rate = 2 ** (st / 12);
-    }
-  };
   // after all spears are placed: turn the shield to meet each one just before it lands
   H.buildShield = () => {
     const hits = TL.shieldHits.sort((a, b) => a.t - b.t);
@@ -705,7 +694,7 @@
     slots.forEach((s, i) => {
       const last = i === slots.length - 1, u = i / (slots.length - 1);
       H.green(at(b, 0, s), last ? OPP[side] : side, {
-        travel: U.lerp(o.travel ?? 0.46, 0.32, u), hitVol: last ? 0.62 : 0.4, vol: i % 2 ? 0.04 : 0.09,
+        travel: U.lerp(o.travel ?? 0.46, 0.32, u), hitVol: last ? 0.62 : i === 0 ? 0.4 : 0, vol: i % 2 ? 0.04 : 0.09,
         heavy: last, deflect: last && o.deflect !== false, stop: last ? 0.05 : 0,
       });
     });

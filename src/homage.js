@@ -537,7 +537,7 @@
   };
   // ================================================================ rhythm game: judgement + combo
   // every block is called (GOOD, PERFECT on the accents, PARRY on a deflect) over a combo
-  // counter at the right edge that burns brighter the longer the chain runs; a chain ends when
+  // counter (silent: the calls are visual only, the song carries the rhythm) at the right edge that burns brighter the longer the chain runs; a chain ends when
   // the spears stop for more than two seconds
   TL.chains = [];
   const JUDGE = { good: ['GOOD', '#a8ffb0'], perfect: ['PERFECT', '#5fd8ff'], parry: ['PARRY!', '#ffe040'] };
@@ -550,7 +550,7 @@
     }
     for (const c of TL.chains) {
       if (c.ts.length < 20) continue; // not the few in the bridge's calm
-      for (const m of [25, 50, 100, 150]) if (c.ts.length >= m) { c.ms.push({ t: c.ts[m - 1], n: m }); H.sfx(c.ts[m - 1], 'Shimmer', 0.22); }
+      for (const m of [25, 50, 100, 150]) if (c.ts.length >= m) { c.ms.push({ t: c.ts[m - 1], n: m }); }
       const t0 = c.ts[0], t1 = c.ts[c.ts.length - 1] + 1.1, X = 862;
       TL.add({
         t0, t1, z: 84, screen: true,
