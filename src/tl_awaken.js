@@ -52,8 +52,8 @@
     H.speed(at(3), at(4), { k: 0.7, cy: 230 });
     TL.rumble.set(at(2), { v: 0 }).to(at(2), at(3), { v: 2.5 }, 'in').to(at(3), at(3, 1), { v: 1 }, 'out');
     TL.rage.to(at(3), at(3, 1), { v: 0.6 }, 'out');
-    H.caption(at(3), at(4, 1), '不死的安黛因', UX, UY + 16, { scale: 3, shake: 4, fadeIn: 0.05, glowA: 0.7 });
-    H.caption(at(3, 1), at(4, 1), 'UNDYNE THE UNDYING', UX, UY + 70, { scale: 1, color: '#9fe8ff', fadeIn: 0.2, spacing: 2 });
+    H.caption(at(3), at(4, 1), '不死的安黛因', 480, 382, { scale: 3, shake: 4, fadeIn: 0.05, glowA: 0, screen: true });
+    H.caption(at(3, 1), at(4, 1), 'UNDYNE THE UNDYING', 480, 438, { scale: 1, color: '#9fe8ff', fadeIn: 0.2, spacing: 2, glowA: 0, screen: true });
     H.face(at(3), 1);
     H.face(at(3, 2), 0);
 
@@ -64,6 +64,8 @@
     H.cut(at(4), { x: 480, y: 262, zoom: 1.05, roll: 0.03 });
     H.cam(at(4) + 0.02, at(4, 2), { roll: 0, zoom: 1 }, 'outExpo');
     H.slam(at(4), UX, { rest: 1.2 });
+    // from the first slam to the last chord the camera keeps her head and the arena in frame
+    TL.safe.set(at(4), { v: 0 }).to(at(4), at(4, 2), { v: 1 }, 'inOut');
     H.face(at(4), 12); H.face(at(4, 3), 0);
     TL.post.to(at(4), at(4, 1), { vig: 0.42, bloom: 1.1, ca: 0.7 }, 'out');
     TL.rage.to(at(4), at(4, 2), { v: 0.45 }, 'out');

@@ -1,13 +1,18 @@
 // WebGL post-processing: 3D camera over the pixel world plane (pitch / yaw /
 // roll / dolly), parallax void background, bloom, chromatic aberration,
 // impact frames (invert / B&W), glitch slices, motion smear, dot-matrix grid.
+// Two 3D extras: a standing layer (Undyne on a plane hinged at her feet, turned
+// to face the camera, so she stays upright when the arena tips into a floor) and a
+// cube transition (the last frame of a phase rotates away as one face of a cube,
+// the live picture turns in as the next face).
 (function () {
   const MV = window.MV;
 
   const VS = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
   const FS = `
 precision highp float;
-uniform sampler2D uWorld, uGlowA, uGlowB, uScreen, u3D;
+uniform sampler2D uWorld, uGlowA, uGlowB, uScreen, u3D, uUnd, uSnap;
+uniform float uStand, uStandAng, uFeetY, uCube;
 uniform float uMode3D;
 uniform vec2 uOut, uWorldSize, uPad, uView, u3DSize;
 uniform vec4 uRect;
@@ -57,31 +62,56 @@ vec3 sceneAt(vec2 uv, float caPx){
   vec3 dir = rayAt(uv);
   float ok; vec2 wp = planeHit(dir, 0.0, ok);
   vec3 bg = voidBg(dir);
-  if (ok < 0.5) return bg;
-  // chromatic aberration: split channels along the radial direction
-  vec4 c = world(wp);
-  vec3 col = c.rgb; float a = c.a;
-  if (caPx > 0.05) {
-    vec2 rd = (uv - 0.5); float rl = length(rd) + 1e-4;
-    vec2 off = rd / rl * caPx * (0.35 + rl);
-    vec4 cr = world(wp + off), cb = world(wp - off);
-    col = vec3(cr.r, c.g, cb.b);
-    a = max(a, max(cr.a, cb.a));
+  vec3 col = bg;
+  if (ok > 0.5) {
+    // chromatic aberration: split channels along the radial direction
+    vec4 c = world(wp);
+    col = c.rgb; float a = c.a;
+    if (caPx > 0.05) {
+      vec2 rd = (uv - 0.5); float rl = length(rd) + 1e-4;
+      vec2 off = rd / rl * caPx * (0.35 + rl);
+      vec4 cr = world(wp + off), cb = world(wp - off);
+      col = vec3(cr.r, c.g, cb.b);
+      a = max(a, max(cr.a, cb.a));
+    }
+    col = mix(bg, col, a);
+    // dot-matrix LCD grid on world pixels (visible when zoomed in)
+    vec2 pf = fract(wp);
+    float gridv = max(step(0.82, pf.x), step(0.82, pf.y));
+    col *= 1.0 - uGrid * gridv * a;
+    col += glow(wp) * uBloom;
   }
-  col = mix(bg, col, a);
-  // dot-matrix LCD grid on world pixels (visible when zoomed in)
-  vec2 pf = fract(wp);
-  float gridv = max(step(0.82, pf.x), step(0.82, pf.y));
-  col *= 1.0 - uGrid * gridv * a;
-  // desaturate / cold tint (blue bone "don't move" moments)
+  // the standing layer: a plane through her feet line, tipped up by uStandAng (= the camera's
+  // pitch, so it always faces the lens); sampled where it is nearer than the floor
+  if (uStand > 0.5) {
+    float th = uStandAng;
+    vec3 N = vec3(0.0, sin(th), -cos(th));
+    vec3 B = vec3(0.0, -cos(th), -sin(th));
+    vec3 Q = vec3(0.0, uFeetY, 0.0);
+    float dn = dot(dir, N);
+    if (abs(dn) > 1e-5) {
+      float tb = dot(Q - uCamPos, N) / dn;
+      vec3 P = uCamPos + dir * tb;
+      float h = dot(P - Q, B);
+      float tf = abs(dir.z) > 1e-5 ? (0.0 - uCamPos.z) / dir.z : 1e9;
+      if (tb > 0.0 && h > -2.0 && (ok < 0.5 || tb < tf)) {
+        vec2 sp = vec2(P.x, uFeetY - h);
+        vec2 suv = (sp + uPad) / uWorldSize;
+        vec4 uc = texture2D(uUnd, suv);
+        float g = 0.0;
+        for (int i = 0; i < 6; i++) { float an = float(i) * 1.047; g += texture2D(uUnd, suv + vec2(cos(an), sin(an)) * 5.0 / uWorldSize).a; }
+        col += vec3(0.55, 0.75, 1.0) * g / 6.0 * 0.22 * uBloom;
+        col = mix(col, uc.rgb, uc.a);
+      }
+    }
+  }
+  // desaturate / cold tint
   float l = dot(col, vec3(0.299, 0.587, 0.114));
   col = mix(col, vec3(l), uDesat);
   col = mix(col, col * uTint + uTint * 0.04, uTintAmt);
-  col += glow(wp) * uBloom;
   return col;
 }
-void main(){
-  vec2 uv = vec2((gl_FragCoord.x - uRect.x) / uRect.z, 1.0 - (gl_FragCoord.y - uRect.y) / uRect.w);
+vec3 frame(vec2 uv){
   // glitch: horizontal slice displacement
   if (uGlitch > 0.0) {
     float band = floor(uv.y * 36.0 + h1(floor(uTime * 24.0)) * 7.0);
@@ -140,6 +170,34 @@ void main(){
   }
   if (uInv > 0.5) col = 1.0 - col;
   else col = mix(col, uFlashCol, uFlash);
+  return col;
+}
+void main(){
+  vec2 uv = vec2((gl_FragCoord.x - uRect.x) / uRect.z, 1.0 - (gl_FragCoord.y - uRect.y) / uRect.w);
+  if (uCube <= 0.0) { gl_FragColor = vec4(frame(uv), 1.0); return; }
+  // cube transition: the snapshot is the front face, the live picture the right face; the
+  // cube (as deep as the screen is wide) turns about its centre by uCube * 90 degrees
+  float A = uOut.x / uOut.y, ph = uCube * 1.5707963;
+  float dist = 0.5 / tan(0.35);
+  vec2 s = (uv - 0.5) * vec2(A, 1.0);
+  vec3 ro = vec3(0.0, 0.0, -dist - A * 0.5), rd = normalize(vec3(s.x, s.y, dist));
+  float cp = cos(ph), sp = sin(ph);
+  vec3 o = vec3(ro.x * cp - ro.z * sp, ro.y, ro.x * sp + ro.z * cp);
+  vec3 d = vec3(rd.x * cp - rd.z * sp, rd.y, rd.x * sp + rd.z * cp);
+  float h = A * 0.5;
+  vec3 col = vec3(0.0); float best = 1e9;
+  if (abs(d.z) > 1e-5) {
+    float t = (-h - o.z) / d.z; vec3 p = o + d * t;
+    if (t > 0.0 && abs(p.x) <= h && abs(p.y) <= 0.5) { best = t; vec2 fu = vec2((p.x + h) / A, p.y + 0.5);
+      col = texture2D(uSnap, fu).rgb * (0.35 + 0.65 * cp);
+      col += vec3(0.6, 0.8, 1.0) * (1.0 - smoothstep(0.0, 0.006, min(min(fu.x, 1.0 - fu.x), min(fu.y, 1.0 - fu.y)))) * 0.8; }
+  }
+  if (abs(d.x) > 1e-5) {
+    float t = (h - o.x) / d.x; vec3 p = o + d * t;
+    if (t > 0.0 && t < best && abs(p.z) <= h && abs(p.y) <= 0.5) { vec2 fu = vec2((p.z + h) / A, p.y + 0.5);
+      col = frame(fu) * (0.35 + 0.65 * sp);
+      col += vec3(0.6, 0.8, 1.0) * (1.0 - smoothstep(0.0, 0.006, min(min(fu.x, 1.0 - fu.x), min(fu.y, 1.0 - fu.y)))) * 0.8; }
+  }
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -176,7 +234,7 @@ void main(){
       const loc = (this.aLoc = gl.getAttribLocation(pr, 'p'));
       gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      this.tex = { world: makeTex(gl, gl.NEAREST), ga: makeTex(gl, gl.LINEAR), gb: makeTex(gl, gl.LINEAR), screen: makeTex(gl, gl.NEAREST) };
+      this.tex = { world: makeTex(gl, gl.NEAREST), ga: makeTex(gl, gl.LINEAR), gb: makeTex(gl, gl.LINEAR), screen: makeTex(gl, gl.NEAREST), und: makeTex(gl, gl.NEAREST), snap: makeTex(gl, gl.LINEAR) };
       this.u = {};
       const n = gl.getProgramParameter(pr, gl.ACTIVE_UNIFORMS);
       for (let i = 0; i < n; i++) {
@@ -184,6 +242,9 @@ void main(){
         this.u[info.name] = gl.getUniformLocation(pr, info.name);
       }
       gl.uniform1i(this.u.uWorld, 0); gl.uniform1i(this.u.uGlowA, 1); gl.uniform1i(this.u.uGlowB, 2); gl.uniform1i(this.u.uScreen, 3); gl.uniform1i(this.u.u3D, 4);
+      if (this.u.uUnd) gl.uniform1i(this.u.uUnd, 5);
+      if (this.u.uSnap) gl.uniform1i(this.u.uSnap, 6);
+      this.snapSrc = null;
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     }
     upload(unit, tex, src) {
@@ -216,6 +277,8 @@ void main(){
         gl.bindTexture(gl.TEXTURE_2D, src.tex3D);
       }
       if (!noUpload) this.upload(3, this.tex.screen, src.screen);
+      if (p.stand && src.und) this.upload(5, this.tex.und, src.und);
+      if (p.cube > 0 && src.snap && src.snap !== this.snapSrc) { this.upload(6, this.tex.snap, src.snap); this.snapSrc = src.snap; }
       else { gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.tex.screen); }
       // camera basis: looking down +z at the world plane (z = 0); screen y = +y world
       const fovY = 0.7, tanY = Math.tan(fovY / 2), tanX = tanY * (R4[2] / R4[3]);
@@ -240,6 +303,7 @@ void main(){
       f1('uTime', p.time); f1('uCA', p.ca); f1('uInv', p.inv); f1('uBW', p.bw); f1('uFlash', p.flash);
       f1('uGlitch', p.glitch); f1('uBloom', p.bloom); f1('uVig', p.vig); f1('uDesat', p.desat);
       f1('uTintAmt', p.tintAmt); f1('uGrid', p.grid); f1('uScan', p.scan); f1('uLetter', p.letter);
+      f1('uStand', p.stand ? 1 : 0); f1('uStandAng', p.standAng || 0); f1('uFeetY', p.feetY || 0); f1('uCube', p.cube || 0);
       f1('uBg', p.bg); f1('uVHS', p.vhs || 0); f1('uMode3D', p.mode3D ? 1 : 0); f1('uBgHue', p.bgHue); f1('uSeed', p.seed || 0);
       gl.uniform3fv(u.uTint, p.tint || [0.55, 0.8, 1.3]);
       gl.uniform3fv(u.uFlashCol, p.flashCol || [1, 1, 1]);

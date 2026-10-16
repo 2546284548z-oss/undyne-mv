@@ -18,8 +18,8 @@
     H.sfx(at(72), 'Boom', 0.7);
     TL.melt.set(at(72), 0);
     TL.und.set(at(72), { sc: 2, y: L.und[1], x: 480 });
-    TL.und.to(at(72), at(72) + 0.02, { flash: 1 }, 'lin').to(at(72) + 0.02, at(72, 2), { flash: 0, shake: 0 }, 'out');
-    TL.und.to(at(72), at(73), { ghost: 0.6, drip: 0.45, breathe: 1, eye: 1.2 }, 'inOut');
+    TL.und.to(at(72), at(72) + 0.02, { flash: 1 }, 'lin').to(at(72) + 0.02, at(72) + 0.22, { flash: 0, shake: 0 }, 'out');
+    TL.und.set(at(72), { ghost: 0 }).to(at(72), at(73), { drip: 0.45, breathe: 1, eye: 1.2 }, 'inOut').to(at(73), at(73, 1), { ghost: 0.6 }, 'inOut');
     TL.hud.to(at(72), at(72, 2), { a: 1 }, 'out');
     TL.btn.forEach((b) => b.to(at(72), at(72, 2), { a: 1, dy: 0 }, 'out'));
     TL.shield.to(at(72), at(72, 1), { ring: 1 }, 'out');
@@ -29,9 +29,20 @@
     TL.rage.set(at(72), { v: 1.5 });
     TL.rumble.set(at(72), { v: 6 }).to(at(72), at(72, 2), { v: 2.6 }, 'out');
     H.cut(at(72), { x: 480, y: 236, zoom: 1.34, roll: 0, pitch: 0, yaw: 0 });
-    H.cutin(at(72), 0.7, { text: '来吧！！！', head: 12 });
+    // 2D -> 3D -> 2D: her sprite grows depth into voxels, she turns one full circle as the
+    // bar refills, and flattens back into the pixel art on the next downbeat
+    TL.und.set(at(72), { vox: 0, vyaw: 0 }).to(at(72), at(72) + 0.3, { vox: 6 }, 'outExpo');
+    // a calmer exposure while she turns, so the voxel form reads; the aura flares back at 73
+    TL.rage.to(at(72) + 0.05, at(72) + 0.3, { v: 0.35 }, 'out').to(at(72, 3), at(73), { v: 1.5 }, 'in');
+    TL.post.to(at(72) + 0.05, at(72) + 0.3, { bloom: 0.75, ca: 0.5 }, 'out').to(at(72, 3), at(73), { bloom: 1.35, ca: 1.2 }, 'in');
+    TL.und.to(at(72), at(73), { vyaw: Math.PI * 2 }, 'inOut');
+    TL.und.to(at(72, 3), at(73), { vox: 0 }, 'in');
+    TL.und.set(at(73) + 0.001, { vyaw: 0 });
+    H.sfx(at(72), 'Shimmer', 0.5); H.sfx(at(72, 2), 'Rotate', 0.45);
+    H.speed(at(72), at(73), { k: 0.6, cy: 200 });
+    H.shout(at(73), at(74), '来吧！！！', { side: 1, y: 130, scale: 4 });
     H.shock(at(72), 480, 150, { r: 520, dust: false });
-    H.barrage(at(72, 1, 3), 5);
+    H.barrage(at(73), 5);
 
     // phase two (Elden Ring): the emptied bar refills, the name changes, the last life burns
     TL.bossName.set(at(72), '真正的英雄 安黛因');
@@ -54,7 +65,7 @@
       if (peril72[b]) H.peril(at(b, 3), { dir: peril72[b] });
       for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.6);
       if (b > 72) { H.dash(at(b) - 0.1, at(b) + 0.08, xs72[b - 72]); H.snap(at(b), { zoom: b % 2 ? 1.48 : 1.36, x: 480 + (xs72[b - 72] - 480) * 0.3, roll: (b % 2 ? -1 : 1) * 0.1 }); }
-      if (b % 2 === 0) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 2), 3, { vol: 0.22 }); }
+      if (b % 2 === 0 && b > 72) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 2), 3, { vol: 0.22 }); }
     }
     H.speed(at(72, 2), at(80), { k: 0.35 });
     H.cam(at(76), at(78), { pitch: 0.24 }, 'inOut');
@@ -63,8 +74,9 @@
     H.face(at(76), 6); H.face(at(78), 0);
 
     // ------------------------------------------------------------ 80 - 87: four spell cards (Touhou, in full)
+    H.cube(at(80) - 0.22, 0.48);
     H.toRed(at(80), { camY: 246, zoom: 1.12 });
-    H.bigHit(at(80), { flash: 0.35, flashCol: [1, 0.2, 0.2] });
+    H.bigHit(at(80), { flash: 0.35, flashCol: [1, 0.2, 0.2], inv: 0, bw: 0 });
     TL.boss.to(at(80), at(80, 1), { pa: 0, tpa: 1 }, 'out');
     H.tpWindow(at(80), at(87, 1), 0.6, 1);
     H.dash(at(80) - 0.1, at(80) + 0.06, 480);
@@ -138,6 +150,7 @@
     const tS = at(88);
     TL.boss.to(at(87, 3), tS, { crack: 1 }, 'in');
     H.shatter(tS);
+    H.glass(tS, { cy: 330 }); // the whole screen breaks like glass and falls toward you
     H.cutin(at(87, 2, 2), 0.55, { text: '给我碎！！', head: 12 });
     TL.hud.to(tS, tS + 0.3, { a: 0 }, 'out');
     TL.btn.forEach((b) => b.to(tS, tS + 0.3, { a: 0 }, 'out'));
@@ -190,7 +203,10 @@
     TL.soulCol.set(at(94) - 0.02, 'green');
     H.sfx(at(94), 'Ding', 0.5);
     TL.shield.to(at(94) - 0.02, at(94) + 0.1, { a: 1 }, 'out');
-    H.cam(at(94), at(95), { x: 480, y: 262, zoom: 1.5 }, 'inOut');
+    // 94 - 95 in first person: the camera dives into the soul, the view becomes its own
+    TL.safe.to(at(93, 3, 1), at(93, 3, 2), { v: 0 }, 'inOut').to(at(95, 3, 2), at(96) - 0.05, { v: 1 }, 'inOut');
+    H.cam(at(93, 3, 2), at(94) + 0.06, { x: 480, y: 352, zoom: 5.5, roll: 0 }, 'in');
+    H.cam(at(95, 3, 2), at(96) - 0.03, { x: 480, y: 262, zoom: 1.3 }, 'outExpo');
     TL.post.to(at(92), at(95), { bloom: 1.5, ca: 1.6 }, 'inOut');
     TL.rumble.to(at(93), at(95, 3), { v: 4.5 }, 'in');
 
@@ -214,6 +230,9 @@
       H.sfx(tIn, 'Hit', 0.2);
       H.green(tHit, side, { travel, dist: 140, vol: 0, hitVol: 0.55 });
     }
+    const ringFP = [];
+    for (let i = 0; i < 12; i++) { const side = order[i % 4]; ringFP.push({ side, tIn: at(94, 0, i), tGo: at(95, 0, fill[i]) - 0.36, ang: H.SIDE_ANG[side] + (Math.floor(i / 4) - 1) * 0.22 }); }
+    H.firstPerson(at(94) + 0.04, at(95, 3, 2), { ring: ringFP });
     TL.und.to(at(94), at(95), { arm: 1.2, lean: -0.06 }, 'inOut');
     TL.und.to(at(95), at(95, 0, 2), { arm: -0.3, lean: 0.05 }, 'outExpo');
     TL.und.to(at(95, 0, 2), at(95, 3), { arm: 0, lean: 0 }, 'inOut');
@@ -252,6 +271,7 @@
     });
     // the ring-out: the melt takes her; the camera eases in
     TL.melt.set(tEnd + 0.9, 2);
+    TL.safe.to(tEnd + 0.3, tEnd + 1.2, { v: 0 }, 'inOut');
     TL.und.to(tEnd + 0.88, tEnd + 0.9, { flash: 0.8 }, 'lin').to(tEnd + 0.9, tEnd + 1.6, { flash: 0 }, 'out');
     H.sfx(tEnd + 0.9, 'Drip', 0.5);
     H.cut(tEnd, { x: 480, y: 250, zoom: 1.2, roll: 0, pitch: 0, yaw: 0 });

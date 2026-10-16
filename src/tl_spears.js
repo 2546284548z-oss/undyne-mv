@@ -124,7 +124,7 @@
   H.swing = (t, col = 'green', flip = false) => {
     H.sfx(t, 'SwipeShort', 0.35);
     TL.add({
-      t0: t, t1: t + 0.32, z: -120,
+      t0: t, t1: t + 0.32, z: -120, und: true,
       draw(ctx, emi, tt, S) {
         const u = (tt - t) / 0.32, img = MV.part('swing/' + col);
         const x = S.und.x + (flip ? 70 : -70), y = S.und.y - 120;
@@ -161,8 +161,9 @@
   MV.sections.push(() => {
     const UY = L.und[1];
     // ------------------------------------------------------------ 28 - 31: fences
+    H.cube(at(28) - 0.22, 0.48); // the green phase turns away as a cube face
     H.toRed(at(28), { camY: 244, zoom: 1.12 });
-    H.bigHit(at(28), { flash: 0.3, flashCol: [1, 0.2, 0.2] });
+    H.bigHit(at(28), { flash: 0.3, flashCol: [1, 0.2, 0.2], inv: 0, bw: 0 });
     H.barrage(at(28), 3);
     TL.post.to(at(28), at(28, 1), { bloom: 1.15, vig: 0.45, ca: 1 }, 'out');
     TL.rumble.to(at(28), at(28, 1), { v: 1.6 }, 'out');
@@ -243,7 +244,12 @@
     H.barrage(at(44), 5);
     H.shock(at(44), L.soul[0], L.soul[1], { r: 360, dust: false });
     H.speed(at(44), at(44, 2), { k: 1 });
-    H.cam(at(44) - 0.3, at(44, 2), { x: 480, y: 250, zoom: 1.36, pitch: 0.32, yaw: 0, roll: 0 }, 'inOut');
+    // 44 - 51: the arena tips back into a floor; the camera drops low behind the soul. Undyne
+    // stays upright (the standing layer), spears skim the floor at you, her shadow lies across
+    // it. 51 - 52 the floor rises back into the flat screen.
+    H.cam(at(44) - 0.15, at(44, 1, 2), { x: 480, y: 258, zoom: 0.94, pitch: 0.98, yaw: 0, roll: 0 }, 'inOut');
+    TL.bg.to(at(44) - 0.15, at(44, 1), { grid: 1 }, 'inOut').to(at(51, 3), at(52), { grid: 0 }, 'inOut');
+    H.cam(at(51, 3), at(52) + 0.12, { x: 480, y: 238, zoom: 1.38, pitch: 0, roll: 0 }, 'inOut');
     TL.post.to(at(44), at(44, 2), { bloom: 1.25, ca: 1, bg: 0.25 }, 'inOut');
     TL.und.to(at(44), at(45), { ghost: 0.5 }, 'inOut');
     TL.rage.to(at(44), at(45), { v: 1.25 }, 'inOut');
@@ -258,13 +264,13 @@
       const f = flur44[b];
       H.greenBar(b, { tone: 0.5, snare: 0.5, kick: b >= 52 ? 0.85 : 0, gap: 2, yel: 0.4, travel: b >= 52 ? 0.42 : 0.46, from: b === 44 ? 2 : 0, to: peril44[b] ? 9 : b === 58 ? 12 : f ? 12 : 16 });
       if (f) H.flurry(at(b, 3), f, 4);
-      if (peril44[b]) H.peril(at(b, 3), { dir: peril44[b] });
+      if (peril44[b]) H.peril(at(b, 3), { dir: peril44[b], screen: b < 52 });
       if (b % 2 === 0) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 0, 2), 2, { vol: 0.2 }); }
       if (b % 2 === 1 && b < 52) H.lunge(at(b), 0.5);
       for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.5);
     }
-    // the arena sways on the 2-bar phrases
-    for (let b = 44; b < 52; b += 2) H.cam(at(b), at(b + 2), { yaw: (b / 2) % 2 ? -0.18 : 0.18 }, 'inOut');
+    // the low camera drifts across the floor on the 2-bar phrases
+    for (let b = 46; b < 52; b += 2) H.cam(at(b) - 0.2, at(b) + 0.4, { x: (b / 2) % 2 ? 440 : 520, roll: (b / 2) % 2 ? -0.04 : 0.04 }, 'inOut');
     // 52 - 55: flatter, closer; she dashes on every downbeat
     for (let i = 0; i < 4; i++) {
       H.snap(at(52 + i), { yaw: 0, pitch: 0.12, roll: (i % 2 ? -1 : 1) * 0.08, zoom: i % 2 ? 1.48 : 1.38 });
@@ -272,7 +278,8 @@
     }
     H.speed(at(52), at(56), { k: 0.45 });
     H.postureBreak(at(58, 3));
-    H.say(at(48), at(50), ['大家的希望……', '都在我身上！'], { cps: 14 });
+    H.shout(at(48), at(49, 2), '大家的希望……', { side: -1, y: 120 });
+    H.shout(at(49, 2), at(50, 3), '都在我身上！', { side: 1, y: 120 });
     H.face(at(48), 6); H.face(at(50), 0);
     // 56 - 58: the peak - closer, hotter
     H.cam(at(56), at(56, 2), { zoom: 1.52, pitch: 0.18, y: 240 }, 'inOut');

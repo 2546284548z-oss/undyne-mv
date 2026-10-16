@@ -19,6 +19,18 @@
   MV.state = (t) => {
     const fx = TL.fxAt(t);
     const cam = TL.cam.at(t);
+    // auto-framing: her head and the bottom of the arena stay between the letterbox bands
+    const sw = TL.safe.at(t).v * (1 - U.clamp(Math.abs(cam.pitch) / 0.15));
+    if (sw > 0.001) {
+      const u = TL.und.at(t), bx = TL.box.at(t), so = TL.soul.at(t);
+      const wTop = u.a > 0.3 ? Math.max(u.y, L.und[1]) - 118 * u.sc - 20 : 40;
+      const wBot = bx.draw > 0.5 ? bx.y + bx.h + 16 : so.a > 0.5 ? 524 : u.y + 24;
+      const sTop = MV.SAFE.top + 6, sBot = 540 - MV.SAFE.bot - 6;
+      const z = Math.min(cam.zoom, (sBot - sTop) / Math.max(40, wBot - wTop));
+      const hi = wTop + (270 - sTop) / z, lo = wBot - (sBot - 270) / z;
+      const y = lo <= hi ? U.clamp(cam.y, lo, hi) : (lo + hi) / 2;
+      cam.zoom = U.lerp(cam.zoom, z, sw); cam.y = U.lerp(cam.y, y, sw);
+    }
     cam.x += fx.sx; cam.y += fx.sy;
     // constant rumble under the boss's pressure
     const rv = TL.rumble.at(t).v;
@@ -45,7 +57,7 @@
       shield: Object.assign(TL.shield.at(t), { hit: sh }),
       und: TL.und.at(t), show: TL.uShow.at(t), head: TL.head.at(t), melt: TL.melt.at(t),
       shadow: TL.shadow.at(t), rage: TL.rage.at(t).v,
-      boss: TL.boss.at(t), bossName: TL.bossName.at(t),
+      boss: TL.boss.at(t), bossName: TL.bossName.at(t), frame: TL.frame.at(t),
       hud: TL.hud.at(t),
       btn: TL.btn.map((b) => b.at(t)),
       bg: TL.bg.at(t),
@@ -62,6 +74,7 @@
       [this.glowA, this.gA] = D.tmp(W >> 2, H >> 2);
       [this.glowB, this.gB] = D.tmp(W >> 3, H >> 3);
       [this.screen, this.sctx] = D.tmp(MV.SW, MV.SH);
+      [this.undC, this.uctx] = D.tmp(W, H); // the standing layer (see post.js)
       this.W = W; this.H = H;
     }
     render(t) {
@@ -76,14 +89,33 @@
       }
       sctx.clearRect(0, 0, MV.SW, MV.SH);
       const evs = TL.active(t);
+      // when the camera tips the arena into a floor, Undyne (and what belongs to her) moves to
+      // the standing layer so she stays upright
+      S.stand = Math.abs(S.cam.pitch) > 0.02 && S.und.a > 0.001;
       const layer = (z0, z1, filter) => {
-        for (const e of evs) if (e.z >= z0 && e.z < z1 && !e.screen && (!filter || filter(e))) e.draw(ctx, emi, t, S);
+        for (const e of evs) if (e.z >= z0 && e.z < z1 && !e.screen && !(S.stand && e.und) && (!filter || filter(e))) e.draw(ctx, emi, t, S);
       };
       const bg = S.bg;
       if (bg.cav > 0.001) D.cavern(ctx, emi, t, { a: bg.cav, rain: bg.rain, drift: bg.drift, ceiling: bg.ceiling, k: bg.k });
+      // the floor grid of the low 3D view: lines scroll toward the camera on the beat
+      if (bg.grid > 0.001) {
+        const sc = ((t - T.off) / T.beat) % 1, k = bg.grid;
+        for (let x = -240; x <= 1200; x += 48) D.rect(ctx, x, -135, 2, 810, '#1e4a8a', 0.55 * k);
+        for (let i = -4; i < 20; i++) { const y = -135 + (i + sc) * 48; D.rect(ctx, -240, y, 1440, 2, '#1e4a8a', 0.55 * k); if (emi) D.rect(emi, -240, y - 1, 1440, 4, '#2a6bff', 0.12 * k); }
+      }
       this.drawShadow(S, t);
       layer(-1000, -100); // backdrops
-      this.drawUndyne(S, t);
+      if (S.stand) {
+        const u = this.uctx;
+        u.setTransform(1, 0, 0, 1, 0, 0); u.clearRect(0, 0, this.W, this.H);
+        u.setTransform(1, 0, 0, 1, MV.PADX, MV.PADY); u.imageSmoothingEnabled = false;
+        const keep = [this.ctx, this.emi];
+        this.ctx = u; this.emi = null;
+        for (const e of evs) if (e.und && e.z < -100) e.draw(u, null, t, S);
+        this.drawUndyne(S, t);
+        for (const e of evs) if (e.und && e.z >= -100) e.draw(u, null, t, S);
+        [this.ctx, this.emi] = keep;
+      } else this.drawUndyne(S, t);
       layer(-100, 0);
       if (bg.flowers > 0.001) D.flowers(ctx, emi, 424, t, bg.flowers);
       // arena
@@ -95,10 +127,11 @@
       ctx.restore(); emi.restore();
       D.box(ctx, emi, b);
       D.cracks(ctx, emi, b, S.boss.crack, t);
-      this.drawHud(S, t);
+      D.posture(ctx, emi, b, S.boss, t);
       layer(0, 40, (e) => e.clip !== 'box');
       this.drawSoul(S, t);
       layer(40, 1000);
+      this.drawFrame(S, t);
       D.bossHud(sctx, S, t);
       for (const e of evs) if (e.screen) e.draw(sctx, null, t, S);
       // bloom sources: quarter + eighth resolution blurs
@@ -140,7 +173,7 @@
       const breathe = u.breathe * (1 - Math.abs(Math.sin(beatPh * Math.PI * 0.5))) * 2;
       const o = {
         head: S.head, arm: u.arm, armL: u.armL, lean: u.lean, breathe, t, melt: S.melt,
-        alpha: u.a, scale: u.sc, glow: u.glow, flash: u.flash, drip: u.drip, eye: u.eye, show: S.show, cut: u.cut,
+        alpha: u.a, scale: u.sc, glow: u.glow, flash: u.flash, drip: u.drip, eye: u.eye, show: S.show, cut: u.cut, vox: u.vox, vyaw: u.vyaw,
         sil: u.sil > 0.5 ? '#000000' : null,
       };
       if (u.ghost > 0.01)
@@ -152,21 +185,33 @@
       // Sekiro's deathblow mark on her chest once her posture breaks
       if (S.boss.mark > 0.01) { const [mx, my] = D.undynePt(u.x + jx, u.y + jy, 52, 70, u.sc); D.deathMark(ctx, emi, mx, my, S.boss.mark, t); }
     }
-    drawHud(S, t) {
-      const { ctx, emi } = this;
-      const h = S.hud;
+    // the letterbox bands, and the player's HUD laid out in the bottom one (screen space:
+    // the camera never crops it)
+    drawFrame(S, t) {
+      const c = this.sctx, f = S.frame;
+      if (f.top > 0.5) D.rect(c, 0, 0, 960, f.top, '#000000', 1);
+      if (f.bot > 0.5) D.rect(c, 0, 540 - f.bot, 960, f.bot, '#000000', 1);
+      if (f.top > 0.5) D.rect(c, 0, f.top - 1, 960, 1, '#1a2a48', 1);
+      if (f.bot > 0.5) D.rect(c, 0, 540 - f.bot, 960, 1, '#1a2a48', 1);
+      const h = S.hud, y0 = 540 - f.bot;
+      if (f.bot < 20) return;
+      const y = y0 + 25;
       if (h.a > 0.001) {
-        const y = L.hudY, jit = h.jit || 0;
-        D.hud(ctx, 'FRISK', L.name, y, { alpha: h.a, shake: jit, seed: t * 60 });
-        D.hud(ctx, 'LV 12', L.lv, y, { alpha: h.a, shake: jit, seed: t * 61 });
-        ctx.globalAlpha = h.a; ctx.drawImage(MV.SPR.hpLabel, L.hpLabel, y); ctx.globalAlpha = 1;
-        D.hpBar(ctx, L.hpBar.x, L.hpBar.y, h.hp, 64, h.a);
-        D.hud(ctx, String(R(h.hp)) + ' / 64', L.hpBar.x + 64 * 1.2 + 14, y, { alpha: h.a, shake: jit, seed: t * 62 });
+        const jit = h.jit || 0;
+        D.hud(c, 'FRISK', 22, y, { alpha: h.a, shake: jit, seed: t * 60 });
+        D.hud(c, 'LV 12', 114, y, { alpha: h.a, shake: jit, seed: t * 61 });
+        c.globalAlpha = h.a; c.drawImage(MV.SPR.hpLabel, 196, y); c.globalAlpha = 1;
+        D.hpBar(c, 226, y - 2, h.hp, 64, h.a);
+        D.hud(c, String(R(h.hp)) + ' / 64', 316, y, { alpha: h.a, shake: jit, seed: t * 62 });
       }
       for (let i = 0; i < 4; i++) {
         const bs = S.btn[i];
         if (bs.a <= 0.001) continue;
-        D.button(ctx, emi, i, L.btnX[i] + (bs.dx || 0), L.btnY + (bs.dy || 0), { a: bs.a, sel: bs.sel });
+        c.save();
+        c.translate(446 + i * 128 + (bs.dx || 0), y0 + 13 + (bs.dy || 0) * 0.5);
+        c.scale(0.8, 0.8);
+        D.button(c, null, i, 0, 0, { a: bs.a, sel: bs.sel });
+        c.restore();
       }
     }
     drawSoul(S, t) {

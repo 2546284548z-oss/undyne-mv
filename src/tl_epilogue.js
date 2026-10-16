@@ -30,7 +30,7 @@
     }
     TL.und.set(d1 + 0.02, { a: 0 });
     TL.bg.to(at(8.6), at(11.2), { cav: 0.9, rain: 0, drift: 1.5 }, 'inOut');
-    H.narrate(at(10.0), at(11.7), ['* 她坚持到了最后一刻。'], { box: { x: 0, y: 0 }, x: 300, y: 452, cps: 12, vol: 0.18, screen: true });
+    H.narrate(at(10.0), at(11.7), ['* 她坚持到了最后一刻。'], { box: { x: 0, y: 0 }, x: 300, y: 494, cps: 12, vol: 0.18, screen: true, z: 99 });
     TL.bg.to(at(11.0), at(11.8), { cav: 0 }, 'inOut');
     TL.post.to(at(11.0), at(11.8), { vig: 1 }, 'inOut');
   });

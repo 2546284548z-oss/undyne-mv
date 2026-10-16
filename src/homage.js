@@ -13,6 +13,14 @@
   const R = Math.round;
   const at = T.at;
 
+  // windows that need a snapshot of a whole frame (main.js renders them first)
+  TL.snaps = [];
+  TL.cubes = [];
+  // the cube turn (see post.js): the frame at t0 rotates away, the live picture turns in
+  H.cube = (t0, dur = 0.5) => {
+    TL.cubes.push({ t0, t1: t0 + dur });
+    H.sfx(t0, 'Whoosh', 0.55); H.sfx(t0 + dur * 0.5, 'Rotate', 0.4);
+  };
   TL.boss = new Track({ a: 0, hp: 1, lag: 1, lives: 2, posture: 0, pa: 0, tp: 0, tpa: 0, crack: 0, phase2: 0, mark: 0 });
   TL.bossName = new Steps('不死的安黛因');
 
@@ -25,7 +33,7 @@
   D.bossHud = (c, S, t) => {
     const b = S.boss;
     if (b.a > 0.001) {
-      const x = 200, y = 30, w = 560, h = 10, a = b.a;
+      const x = 200, y = 32, w = 560, h = 10, a = b.a;
       D.text(c, S.bossName, x, y - 24, { scale: 1, alpha: a, color: b.phase2 > 0.5 ? '#ffd84a' : '#ffffff', outline: '#000000' });
       // Sekiro's lives: red beads after the name
       const nw = D.textWidth(S.bossName, { scale: 1 });
@@ -41,15 +49,6 @@
       D.rect(c, x, y, w * b.hp, h, col, a);
       D.rect(c, x, y, w * b.hp, 2, '#ff98a0', a * 0.7);
     }
-    // Sekiro's posture: fills from the centre outward, yellow -> red, flashes when full
-    if (b.pa > 0.001) {
-      const cx = 480, y = 50, hw = 150, p = U.clamp(b.posture), a = b.pa;
-      D.rect(c, cx - hw - 2, y - 2, hw * 2 + 4, 10, '#000000', 0.75 * a);
-      D.rect(c, cx - hw, y, hw * 2, 6, '#201408', a);
-      const col = p >= 0.995 ? (Math.floor(t * 16) % 2 ? '#ffffff' : '#ff2020') : p > 0.8 ? '#ff3020' : p > 0.55 ? '#ff8a10' : '#ffc030';
-      D.rect(c, cx - hw * p, y, hw * 2 * p, 6, col, a);
-      D.rect(c, cx - 3, y - 4, 6, 14, '#ffffff', a * 0.9);
-    }
     // Deltarune's TP: an orange bar down the left edge
     if (b.tpa > 0.001) {
       const x = 28, y = 170, w = 22, h = 210, p = U.clamp(b.tp), a = b.tpa;
@@ -62,6 +61,19 @@
       if (gf > 0) D.rect(c, x, y, w, h, '#ffffff', a * gf * 0.6);
       D.hud(c, p >= 0.999 ? 'MAX' : R(p * 100) + '%', x + w / 2, y + h + 12, { align: 'center', alpha: a, color: p >= 0.999 ? '#ffe040' : '#ffffff' });
     }
+  };
+
+  // Sekiro's posture, drawn in the world right above the battle box (where the eye already is):
+  // fills from the centre outward, yellow -> red, flashes when full
+  D.posture = (ctx, emi, box, b, t) => {
+    if (b.pa <= 0.001 || (box.draw ?? 1) < 0.5) return;
+    const cx = box.x + box.w / 2, y = box.y - 22, hw = Math.max(70, box.w / 2 + 10), p = U.clamp(b.posture), a = b.pa;
+    D.rect(ctx, cx - hw - 2, y - 2, hw * 2 + 4, 9, '#000000', 0.8 * a);
+    D.rect(ctx, cx - hw, y, hw * 2, 5, '#201408', a);
+    const col = p >= 0.995 ? (Math.floor(t * 16) % 2 ? '#ffffff' : '#ff2020') : p > 0.8 ? '#ff3020' : p > 0.55 ? '#ff8a10' : '#ffc030';
+    D.rect(ctx, cx - hw * p, y, hw * 2 * p, 5, col, a);
+    D.rect(ctx, cx - 2, y - 3, 4, 11, '#ffffff', a * 0.9);
+    if (emi && p > 0.8) D.rect(emi, cx - hw * p, y - 3, hw * 2 * p, 11, col, a * 0.5 * (p - 0.8) * 5);
   };
 
   // ================================================================ Smash: hit-stop / freeze frame
@@ -117,11 +129,12 @@
     H.sfx(t - 0.55, 'Peril', 0.6);
     TL.impact(t - 0.55, { amp: 3, flash: 0.2, flashCol: [1, 0.1, 0.1], dur: 0.3 });
     TL.add({
-      t0: t - 0.55, t1: t + 0.12, z: 86,
+      t0: t - 0.55, t1: t + 0.12, z: 86, screen: !!o.screen,
       draw(ctx, emi, tt, S) {
         const u = tt - (t - 0.55), k = Math.min(U.clamp(u / 0.05), U.clamp((t + 0.12 - tt) / 0.12));
-        const sc = u < 0.07 ? 6 : 4;
-        D.text(ctx, '危', S.soul.x, S.soul.y - 96 - (sc - 4) * 8, { scale: sc, align: 'center', color: '#ff1828', outline: '#000000', alpha: k, glow: emi, glowA: 0.9, shake: u < 0.18 ? 2 : 0, seed: R(tt * 40) });
+        const sc = (o.screen ? 6 : 4) + (u < 0.07 ? 2 : 0);
+        const x = o.screen ? 270 : S.soul.x, y = (o.screen ? 190 : S.soul.y - 96) - (sc - 4) * 8;
+        D.text(ctx, '危', x, y, { scale: sc, align: 'center', color: '#ff1828', outline: '#000000', alpha: k, glow: emi, glowA: 0.9, shake: u < 0.18 ? 2 : 0, seed: R(tt * 40) });
       },
     });
     TL.shield.to(t - 0.38, t - 0.36, { a: 0 }, 'out');
@@ -182,7 +195,7 @@
         }
         c.restore();
         const sc = u < 0.05 ? 11 : 8;
-        D.text(c, '忍杀', 480, 250 - sc * 8, { scale: sc, align: 'center', color: '#e8101c', outline: '#000000', alpha: k, shake: u < 0.2 ? 3 : 0, seed: R(tt * 30) });
+        D.text(c, '忍杀', 480, 318 - sc * 8, { scale: sc, align: 'center', color: '#e8101c', outline: '#000000', alpha: k, shake: u < 0.2 ? 3 : 0, seed: R(tt * 30) });
       },
     });
   };
@@ -324,6 +337,158 @@
       });
     }
   };
+  // ================================================================ 3D: the screen shatters like glass
+  // The frame just before t is cut into shards (radial cracks x rings round the box); they hang
+  // a moment as cracks, then tumble toward the camera in perspective and fall away, showing the
+  // live picture behind. Each shard is the snapshot mapped onto its moving triangle.
+  H.glass = (t, o = {}) => {
+    const ts = t - 1 / 60, dur = o.dur ?? 1.35, cx = o.cx ?? 480, cy = o.cy ?? 330;
+    TL.snaps.push({ t0: t, t1: t + dur, ts });
+    H.sfx(t, 'Shock', 0.5);
+    const rnd = U.rng(77), rays = 15, rings = [0, 70, 160, 290, 460, 900];
+    const A = [];
+    for (let i = 0; i < rays; i++) A.push((i / rays) * U.TAU + (rnd() - 0.5) * 0.25);
+    const P = rings.map((r, j) => A.map((a) => { const rr = j ? r * (0.85 + rnd() * 0.3) : 0; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }));
+    const tris = [];
+    for (let j = 0; j < rings.length - 1; j++) for (let i = 0; i < rays; i++) {
+      const i2 = (i + 1) % rays, a = P[j][i], b = P[j][i2], c = P[j + 1][i2], d = P[j + 1][i];
+      if (j === 0) tris.push([a, c, d]); else { tris.push([a, b, c]); tris.push([a, c, d]); }
+    }
+    const shards = tris.map((tr, k) => {
+      const g = [(tr[0][0] + tr[1][0] + tr[2][0]) / 3, (tr[0][1] + tr[1][1] + tr[2][1]) / 3];
+      const dx = g[0] - cx, dy = g[1] - cy, dl = Math.hypot(dx, dy) + 1e-3;
+      return { tr, g, d: [dx / dl, dy / dl], v: 120 + rnd() * 260, vz: 500 + rnd() * 700, spin: (rnd() - 0.5) * 9, tumble: 3 + rnd() * 7, psi: rnd() * U.TAU, delay: 0.06 + (dl / 900) * 0.18 };
+    });
+    TL.add({
+      t0: t, t1: t + dur, z: 86, screen: true,
+      draw(c, emi, tt) {
+        const img = MV.snapCached(ts);
+        if (!img) return;
+        const u0 = tt - t, f = 640;
+        const order = shards.slice().sort((p, q) => q.delay - p.delay);
+        for (const s of order) {
+          const u = Math.max(0, u0 - s.delay);
+          const z = -s.vz * u, k = f / Math.max(80, f + z);
+          const pos = [s.g[0] + s.d[0] * s.v * u, s.g[1] + s.d[1] * s.v * u + 380 * u * u];
+          const th = s.spin * u, ph = s.tumble * u, ca = Math.cos(th), sa = Math.sin(th), cp = Math.cos(ph);
+          const cps = Math.cos(s.psi), sps = Math.sin(s.psi);
+          const q = s.tr.map(([x, y]) => {
+            let lx = x - s.g[0], ly = y - s.g[1];
+            // tumble: squash along a fixed axis (a turn about it), then spin in the screen plane
+            const ax = lx * cps + ly * sps, ay = -lx * sps + ly * cps;
+            const bx = ax * cp, by = ay;
+            lx = bx * cps - by * sps; ly = bx * sps + by * cps;
+            const rx = lx * ca - ly * sa, ry = lx * sa + ly * ca;
+            return [480 + (pos[0] + rx - 480) * k, 270 + (pos[1] + ry - 270) * k];
+          });
+          const alpha = U.clamp(1 - (u0 - 0.75) / 0.6);
+          if (alpha <= 0) continue;
+          // affine map source triangle -> destination triangle
+          const [p0, p1, p2] = s.tr, [q0, q1, q2] = q;
+          const den = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (p1[1] - p0[1]);
+          if (Math.abs(den) < 1e-6) continue;
+          const ma = ((q1[0] - q0[0]) * (p2[1] - p0[1]) - (q2[0] - q0[0]) * (p1[1] - p0[1])) / den;
+          const mc = ((q2[0] - q0[0]) * (p1[0] - p0[0]) - (q1[0] - q0[0]) * (p2[0] - p0[0])) / den;
+          const mb = ((q1[1] - q0[1]) * (p2[1] - p0[1]) - (q2[1] - q0[1]) * (p1[1] - p0[1])) / den;
+          const md = ((q2[1] - q0[1]) * (p1[0] - p0[0]) - (q1[1] - q0[1]) * (p2[0] - p0[0])) / den;
+          const me = q0[0] - ma * p0[0] - mc * p0[1], mf = q0[1] - mb * p0[0] - md * p0[1];
+          c.save();
+          c.globalAlpha = alpha;
+          c.beginPath(); c.moveTo(q0[0], q0[1]); c.lineTo(q1[0], q1[1]); c.lineTo(q2[0], q2[1]); c.closePath(); c.clip();
+          c.setTransform(ma, mb, mc, md, me, mf);
+          c.drawImage(img, 0, 0, img.width, img.height, 0, 0, 960, 540);
+          c.setTransform(1, 0, 0, 1, 0, 0);
+          // light catching the tilted glass
+          const lit = (1 - Math.abs(cp)) * 0.6 + (u0 < 0.08 ? 0.15 : 0);
+          if (lit > 0.01) { c.fillStyle = cp > 0 ? '#ffffff' : '#000000'; c.globalAlpha = alpha * lit * (cp > 0 ? 0.7 : 0.5); c.fill(); }
+          c.restore();
+          c.save(); c.globalAlpha = alpha * (u0 < 0.1 ? 1 : 0.7); c.strokeStyle = '#e8f4ff'; c.lineWidth = u0 < 0.1 ? 2 : 1;
+          c.beginPath(); c.moveTo(q0[0], q0[1]); c.lineTo(q1[0], q1[1]); c.lineTo(q2[0], q2[1]); c.closePath(); c.stroke(); c.restore();
+        }
+      },
+    });
+  };
+
+  // ================================================================ 3D: first person behind the shield
+  // The camera dives into the soul: the screen becomes its point of view. Her face hangs at the
+  // vanishing point, her eye burning; every spear of the window comes straight at the lens out of
+  // the dark and meets the shield arc at the edge of the view. An iris opens from the soul at t0
+  // and closes back into it at t1, where the flat 2D picture takes over again.
+  H.firstPerson = (t0, t1, o = {}) => {
+    const R0 = 160, f = 300, far = 2400, top = MV.SAFE.top, bot = 540 - MV.SAFE.bot;
+    const SIDE = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+    H.sfx(t0, 'Whoosh', 0.6); H.sfx(t0, 'Shimmer', 0.4);
+    TL.impact(t0, { amp: 0, flash: 0.8, dur: 0.35 });
+    TL.add({
+      t0, t1: t1 + 0.2, z: 87, screen: true,
+      draw(c, emi, t, S) {
+        const fx = S.fx, sx = fx.sx * 1.5, sy = fx.sy * 1.5;
+        const cx = 480 + sx, cy = 266 + sy;
+        const rIn = 1000 * U.eOutExpo(U.clamp((t - t0) / 0.28)), rOut = t > t1 ? 1000 * (1 - U.eIn(U.clamp((t - t1) / 0.18))) : 1000;
+        const ir = Math.min(rIn, rOut);
+        if (ir < 1) return;
+        c.save();
+        c.beginPath(); c.rect(0, top, 960, bot - top); c.clip();
+        c.beginPath(); c.arc(480, 266, ir, 0, U.TAU); c.clip();
+        c.fillStyle = '#02040e'; c.fillRect(0, top, 960, bot - top);
+        // the tunnel: stars streaming past
+        for (let i = 0; i < 160; i++) {
+          const a = U.hash(i * 1.7) * U.TAU, ph = (t * (0.7 + U.hash(i * 3.1) * 0.6) + U.hash(i * 5.3)) % 1;
+          const zz = far * (1 - ph) + 60, r = 260 * f / zz, r2 = 260 * f / (zz + 160);
+          c.strokeStyle = U.hash(i) < 0.7 ? '#5fd8ff' : '#ffffff'; c.globalAlpha = Math.min(1, ph * 1.6) * 0.7; c.lineWidth = 1 + ph * 2;
+          c.beginPath(); c.moveTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); c.stroke();
+        }
+        c.globalAlpha = 1;
+        // four lanes the spears come down
+        for (const k of ['u', 'r', 'd', 'l']) {
+          const v = SIDE[k]; c.strokeStyle = '#1e3a8a'; c.globalAlpha = 0.5; c.lineWidth = 2;
+          c.beginPath(); c.moveTo(cx + v[0] * 20, cy + v[1] * 20); c.lineTo(cx + v[0] * 700, cy + v[1] * 700); c.stroke();
+        }
+        c.globalAlpha = 1;
+        // her face at the vanishing point, the eye burning
+        const head = MV.part('und/head' + (S.head || 0)), hs = 4.2;
+        c.imageSmoothingEnabled = false;
+        c.globalAlpha = 0.85; c.drawImage(MV.tintNow(head, '#24407a', 0), cx - head.width * hs / 2, cy - head.height * hs / 2 - 10, head.width * hs, head.height * hs);
+        c.globalAlpha = 1;
+        const ex = cx - head.width * hs / 2 + 12 * hs, ey = cy - head.height * hs / 2 - 10 + 13 * hs, fl = 0.7 + 0.3 * Math.sin(t * 37);
+        D.rect(c, ex - 7, ey - 7, 14, 14, '#ff2030', fl); D.rect(c, ex - 3, ey - 3, 6, 6, '#ffffff', 1);
+        // spears in flight (the same spears the 2D shield is blocking), far ones first
+        const live = TL.greens.filter((sp) => t >= sp.t0 && t < sp.t1 && sp.t1 > t0 - 0.1 && sp.t0 < t1 + 0.4).map((sp) => ({ sp, z: U.lerp(far, f, (t - sp.t0) / (sp.t1 - sp.t0)) })).sort((a, b) => b.z - a.z);
+        // the hovering ring of spears gathering in the first bar
+        if (o.ring) for (const h of o.ring) {
+          if (t < h.tIn || t >= h.tGo) continue;
+          const k = U.eOutBack(U.clamp((t - h.tIn) / 0.25)), a = h.ang + Math.sin(t * 3) * 0.05, zz = far, rr = R0 * f / zz * 1.6 * k;
+          const px = cx + Math.cos(a) * rr * 2.2, py = cy + Math.sin(a) * rr * 2.2;
+          MV.spr(c, MV.part('spear/blue_' + h.side), px, py, { scale: 0.9 * k, alpha: k, rot: 0 });
+        }
+        for (const { sp, z } of live) {
+          const v = SIDE[sp.final], k = f / z, px = cx + v[0] * R0 * k, py = cy + v[1] * R0 * k;
+          // streak back toward the vanishing point
+          c.strokeStyle = sp.kind === 'yel' ? '#ffe040' : '#5fd8ff'; c.globalAlpha = 0.5; c.lineWidth = Math.max(1, 6 * k);
+          c.beginPath(); c.moveTo(px - v[0] * 120 * k, py - v[1] * 120 * k); c.lineTo(px, py); c.stroke(); c.globalAlpha = 1;
+          MV.spr(c, MV.part('spear/' + (sp.kind === 'yel' ? 'yel_' : 'blue_') + sp.final), px, py, { scale: 4.2 * k, ax: 0.5, ay: 0.5 });
+        }
+        // the green ring and the shield arc
+        D.pixelRing(c, cx, cy, R0 + 34, 3, '#00c000', 0.8);
+        const sh = S.shield, hit = sh.hit || 0, dir = sh.dir;
+        c.lineCap = 'butt';
+        c.strokeStyle = hit > 0.5 ? '#ff3030' : hit > 0.01 ? '#ffffff' : '#2a6bff'; c.lineWidth = 18;
+        c.beginPath(); c.arc(cx, cy, R0 + 14, dir - 0.55, dir + 0.55); c.stroke();
+        c.strokeStyle = '#bfe0ff'; c.lineWidth = 4; c.beginPath(); c.arc(cx, cy, R0 + 14, dir - 0.5, dir + 0.5); c.stroke();
+        // sparks where a spear just broke on the shield
+        for (const h of TL.shieldHits) {
+          const d = t - h.t; if (d < 0 || d > 0.25 || h.t < t0) continue;
+          const v = SIDE[h.side], bx = cx + v[0] * (R0 + 14), by = cy + v[1] * (R0 + 14);
+          for (let i = 0; i < 14; i++) { const a = Math.atan2(v[1], v[0]) + (U.hash(h.t * 7 + i) - 0.5) * 2.2, r = d * (300 + U.hash(i * 3.3 + h.t) * 400); D.rect(c, bx + Math.cos(a) * r, by + Math.sin(a) * r, 4, 4, i % 3 ? '#9fe8ff' : '#ffffff', 1 - d / 0.25); }
+          D.pixelRing(c, bx, by, 10 + d * 220, 3, '#ffffff', 1 - d / 0.25);
+        }
+        c.restore();
+        // the iris rim
+        if (ir < 990) { c.save(); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.globalAlpha = 0.9; c.beginPath(); c.arc(480, 266, ir, 0, U.TAU); c.stroke(); c.restore(); }
+      },
+    });
+  };
+
   // a pulse of the screen border on a kick
   H.pulse = (t, k = 1, col = '#ffffff') =>
     TL.add({

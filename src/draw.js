@@ -326,6 +326,7 @@
       s.globalCompositeOperation = 'source-over';
     }
     const sc = o.scale || 2;
+    if (o.vox > 0.01 && !o.sil) { D.voxelize(ctx, emi, c, x, y, sc, o.vox, o.vyaw || 0, o.alpha ?? 1); return; }
     const src = o.sil ? MV.tintNow(c, o.sil, 0) : c;
     const draw = (cx, img, a, scl = 1) => {
       cx.save();
@@ -342,6 +343,56 @@
     if (o.eye > 0.01 && !o.melt) {
       const at = rig.head0, ex = x + (at[0] + EYE[0] - FOOT[0]) * sc, ey = y + (at[1] + EYE[1] + br - FOOT[1]) * sc;
       D.eyeGlow(ctx, emi, ex, ey, o.eye, t);
+    }
+  };
+  // 2D -> 3D: the composed sprite extruded into voxels (each pixel a column `depth` deep), turned
+  // by `yaw` about her vertical axis with a little perspective, painted back to front. Faces are
+  // lit by how squarely they meet the camera; the black fill stays a dark navy so the form reads.
+  let vox = null;
+  D.voxelize = (ctx, emi, c, x, y, sc, depth, yaw, alpha) => {
+    const g = c.getContext('2d').getImageData(0, 0, CW, CH).data;
+    const T = Math.max(1, Math.round(depth));
+    if (!vox) vox = { X: new Float32Array(120000), Y: new Float32Array(120000), Z: new Float32Array(120000), C: new Uint8Array(120000), I: new Uint32Array(120000) };
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), F = 520;
+    const op = (px, py) => px >= 0 && py >= 0 && px < CW && py < CH && g[(py * CW + px) * 4 + 3] > 128;
+    let n = 0;
+    for (let py = 0; py < CH; py++) for (let px = 0; px < CW; px++) {
+      const i = (py * CW + px) * 4;
+      if (g[i + 3] <= 128) continue;
+      const white = g[i] + g[i + 1] + g[i + 2] > 300;
+      const edge = !op(px - 1, py) || !op(px + 1, py);
+      const X0 = px - (OX + FOOT[0]), Y0 = py - (OY + FOOT[1]);
+      for (let k = -T; k <= T; k++) {
+        const face = k === -T || k === T;
+        if (!face && !edge) continue;
+        if (n >= 120000) break;
+        vox.X[n] = X0 * cy + k * sy; vox.Z[n] = -X0 * sy + k * cy; vox.Y[n] = Y0;
+        // colour class: 0 white face, 1 white side, 2 dark face, 3 dark side
+        vox.C[n] = (white ? 0 : 2) + (face ? 0 : 1);
+        vox.I[n] = n; n++;
+      }
+    }
+    const I = vox.I.subarray(0, n).sort((a, b) => vox.Z[b] - vox.Z[a]);
+    const lf = 0.45 + 0.55 * Math.abs(cy), ls = 0.3 + 0.6 * Math.abs(sy);
+    const shade = (v, l) => Math.round(v * l);
+    const cols = [
+      `rgb(${shade(255, lf)},${shade(255, lf)},${shade(255, Math.min(1, lf + 0.08))})`,
+      `rgb(${shade(70, ls)},${shade(96, ls)},${shade(150, ls)})`,
+      `rgb(${shade(22, lf + 0.3)},${shade(34, lf + 0.3)},${shade(70, lf + 0.3)})`,
+      `rgb(${shade(14, ls + 0.3)},${shade(22, ls + 0.3)},${shade(48, ls + 0.3)})`,
+    ];
+    ctx.save(); ctx.globalAlpha = alpha;
+    let last = -1;
+    for (let j = 0; j < n; j++) {
+      const v = I[j], s = F / (F + vox.Z[v] * sc), q = sc * s;
+      if (vox.C[v] !== last) { last = vox.C[v]; ctx.fillStyle = cols[last]; }
+      ctx.fillRect(Math.round(x + vox.X[v] * q), Math.round(y + vox.Y[v] * q), Math.ceil(q) + 1, Math.ceil(q) + 1);
+    }
+    ctx.restore();
+    if (emi) {
+      emi.globalAlpha = 0.07 * alpha; emi.fillStyle = '#bfe0ff';
+      for (let j = 0; j < n; j += 3) { const v = I[j]; if (vox.C[v] > 1) continue; const s = F / (F + vox.Z[v] * sc), q = sc * s; emi.fillRect(Math.round(x + vox.X[v] * q) - 2, Math.round(y + vox.Y[v] * q) - 2, q + 4, q + 4); }
+      emi.globalAlpha = 1;
     }
   };
   D.undyneEye = (x, y, o = {}) => {

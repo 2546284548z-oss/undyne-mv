@@ -18,7 +18,9 @@
     TL.cam.to(0, 6.2, { zoom: 1.32, y: 260 }, 'inOut');
     for (const t of [0.6, 2.2, 3.7, 5.3]) H.sfx(t, 'Drip', 0.35);
 
-    H.narrate(0.35, 2.35, ['* 她替那个孩子挡下了这一击。'], { box: { x: 0, y: 0 }, x: 270, y: 456, cps: 16, screen: true });
+    // the cinematic frame closes in from the first second; the narration sits in the bottom band
+    TL.frame.set(0, { top: 0, bot: 0 }).to(0, 0.9, { top: MV.SAFE.top, bot: MV.SAFE.bot }, 'out');
+    H.narrate(0.35, 2.35, ['* 她替那个孩子挡下了这一击。'], { box: { x: 0, y: 0 }, x: 270, y: 494, cps: 16, screen: true, z: 99 });
 
     // the blow
     boss.to(1.0, 1.6, { a: 1 }, 'inOut');

@@ -26,13 +26,13 @@
   TL.soulCol = new Steps('red');
   TL.aura = new Track({ v: 0 });
   TL.shield = new Track({ a: 0, dir: -Math.PI / 2, ring: 1 });
-  TL.und = new Track({ x: L.und[0], y: L.und[1], a: 0, sc: 2, arm: 0, armL: 0, lean: 0, breathe: 1, glow: 0.12, flash: 0, drip: 0, eye: 0, shake: 0, sil: 0, ghost: 0, cut: 0 });
+  TL.und = new Track({ x: L.und[0], y: L.und[1], a: 0, sc: 2, arm: 0, armL: 0, lean: 0, breathe: 1, glow: 0.12, flash: 0, drip: 0, eye: 0, shake: 0, sil: 0, ghost: 0, cut: 0, vox: 0, vyaw: 0 });
   TL.uShow = new Track({ hair: 1, legs: 1, cape: 1, torso: 1, armL: 1, spearArm: 1, head: 1 });
   TL.head = new Steps(0);
   TL.melt = new Steps(0);
   TL.hud = new Track({ a: 0, hp: 64, jit: 0 });
   TL.btn = [0, 1, 2, 3].map(() => new Track({ a: 0, sel: 0, dx: 0, dy: 0 }));
-  TL.bg = new Track({ cav: 0, rain: 0, drift: 6, ceiling: 0.75, flowers: 0, k: 1 });
+  TL.bg = new Track({ cav: 0, rain: 0, drift: 6, ceiling: 0.75, flowers: 0, k: 1, grid: 0 });
   TL.post = new Track({ bloom: 1, vig: 0.35, desat: 0, tint: 0, tintAmt: 0, grid: 0, scan: 0.04, letter: 0, bg: 0, bgHue: 0.6, ca: 0.5, glitch: 0 });
   TL.boxHits = [];
   TL.shieldHits = [];
@@ -41,6 +41,11 @@
   TL.rumble = new Track({ v: 0 });
   TL.shadow = new Track({ a: 0, x: 480, y: 760, sc: 7, eye: 1 });
   TL.rage = new Track({ v: 0 });
+  // the cinematic frame: letterbox bands (screen px) holding the HUD; `safe` weights the
+  // camera's auto-framing that keeps her head and the arena inside the picture between them
+  MV.SAFE = { top: 52, bot: 62 };
+  TL.frame = new Track({ top: 0, bot: 0 });
+  TL.safe = new Track({ v: 0 });
 
   // sections register builders; they run after the assets are loaded
   MV.sections = [];
@@ -334,7 +339,11 @@
         const shown = lines.map((l) => { const s = [...l].slice(0, Math.max(0, left)).join(''); left -= [...l].length; return s; });
         const out = t > t1 - 0.12 ? (t1 - t) / 0.12 : 1;
         const [ex, ey] = o.at ? o.at(t, S) : D.undyneEye(S.und.x, S.und.y + 0, { breathe: S.und.breathe });
-        const x = ex + (o.dx ?? 70), y = ey + (o.dy ?? -30);
+        let x = ex + (o.dx ?? 70), y = ey + (o.dy ?? -30);
+        // keep the bubble inside the picture (between the letterbox bands)
+        const c = S.cam, z = c.zoom || 1;
+        x = U.clamp(x, c.x - 468 / z, c.x + 468 / z - w);
+        y = U.clamp(y, c.y + (MV.SAFE.top + 8 - 270) / z, c.y + (540 - MV.SAFE.bot - 8 - 270) / z - h);
         D.bubble(ctx, x, y, w, h, shown, { tx: ex + 30, ty: ey + 10, alpha: out, scale: sc, pop: 0.85 + 0.15 * U.eOutBack(U.clamp((t - t0) / 0.15)) });
       },
     });
@@ -441,7 +450,11 @@
       },
     });
   // a big shouted line (screen space): slams in oversized, shakes, red outline
+  let shoutSide = 1;
   H.shout = (t0, t1, str, o = {}) => {
+    shoutSide = -shoutSide;
+    const side = o.side ?? shoutSide;
+    if (o.x === undefined) o = Object.assign({}, o, { x: side < 0 ? 196 : 764, y: o.y ?? 150, scale: o.scale ?? 3 });
     H.sfx(t0, 'Slam', o.vol ?? 0.45);
     if (o.hit !== false) H.hit(t0, o.k ?? 0.8);
     return TL.add({

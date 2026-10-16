@@ -20,7 +20,27 @@
   // audio latency calibration (seconds, + = visuals later)
   const LAT = parseFloat(q.get('lat') || '0');
 
+  // snapshots of whole output frames (the old face of a cube turn, the glass that shatters):
+  // rendered once on demand, before the live frame that needs them
+  const snapCache = {};
+  let snapping = false;
+  const snapKey = (ts) => ts.toFixed(4) + '@' + canvas.width + 'x' + canvas.height;
+  MV.snapCached = (ts) => snapCache[snapKey(ts)];
+  const snapshot = (ts) => {
+    const key = snapKey(ts);
+    if (snapCache[key]) return snapCache[key];
+    snapping = true; MV.renderFrame(ts); snapping = false;
+    const c = document.createElement('canvas');
+    c.width = canvas.width; c.height = canvas.height;
+    c.getContext('2d').drawImage(canvas, 0, 0);
+    return (snapCache[key] = c);
+  };
   MV.renderFrame = (tReal) => {
+    let cube = 0, snap = null;
+    if (!snapping) {
+      for (const w of TL.snaps) if (tReal >= w.t0 && tReal < w.t1) snapshot(w.ts);
+      for (const c of TL.cubes) if (tReal >= c.t0 && tReal < c.t1) { cube = Math.max(1e-4, U.eInOut((tReal - c.t0) / (c.t1 - c.t0))); snap = snapshot(c.t0); }
+    }
     const t = TL.vt(tReal);
     const vhs = TL.vhsAt(tReal);
     MV.tReal = tReal; // hit-stop: the picture holds, overlays keep running on real time
@@ -36,12 +56,13 @@
     const vr = (c1.roll - c0.roll) * 300 + (c1.yaw - c0.yaw) * 400;
     const vm = Math.hypot(vx + vr, vy);
     if (vm > 12 && vm < 140) { const k = (Math.min(vm, 60) - 12) / vm; smear = [((vx + vr) * k) / MV.VW, (vy * k) / MV.VH]; }
-    const src = { world: scene.world, glowA: scene.glowA, glowB: scene.glowB, screen: scene.screen };
+    const src = { world: scene.world, glowA: scene.glowA, glowB: scene.glowB, screen: scene.screen, und: scene.undC, snap };
     const params = {
       time: t, ca: P.ca + fx.ca, inv: fx.inv, bw: fx.bw, flash: Math.min(1, fx.flash), glitch: Math.max(P.glitch, fx.glitch),
       bloom: P.bloom * (0.85 + env * 0.4), vig: P.vig, desat: P.desat, tintAmt: Math.max(P.tintAmt, P.tint * 0.35), grid: P.grid * U.clamp(S.cam.zoom - 0.6),
       scan: P.scan + vhs * 0.25, vhs, mode3D: false, letter: P.letter, bg: P.bg * (0.7 + env * 0.5), bgHue: P.bgHue, smear, seed: Math.floor(t * 30) % 97,
       flashCol: fx.flashCol || [1, 1, 1], tint: P.tintCol,
+      stand: S.stand, standAng: S.cam.pitch, feetY: S.und.y, cube,
     };
     post.render(src, cam, params);
     return S;
