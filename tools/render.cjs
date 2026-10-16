@@ -121,6 +121,17 @@ function mixAudio(sfx, wavPath, o) {
     if (!s) { console.warn('missing sound', e.name); continue; }
     const i0 = Math.round(e.t * AR) * 2;
     const g = e.vol * gain;
+    if (e.rate && e.rate !== 1) {
+      // pitched: linear-interpolated resampling (playbackRate)
+      const n = Math.floor((s.length / 2 - 1) / e.rate);
+      for (let j = 0; j < n && i0 + 2 * j + 1 < mix.length; j++) {
+        if (i0 + 2 * j < 0) continue;
+        const x = j * e.rate, k = Math.floor(x), u = x - k;
+        mix[i0 + 2 * j] += (s[2 * k] * (1 - u) + s[2 * k + 2] * u) * g;
+        mix[i0 + 2 * j + 1] += (s[2 * k + 1] * (1 - u) + s[2 * k + 3] * u) * g;
+      }
+      continue;
+    }
     for (let i = 0; i < s.length && i0 + i < mix.length; i++) if (i0 + i >= 0) mix[i0 + i] += s[i] * g;
   }
   // a range that starts mid-sound: 12 ms fade-in so the first sample does not click

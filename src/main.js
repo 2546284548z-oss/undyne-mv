@@ -182,6 +182,7 @@
       scheduled.add(key);
       const src = actx.createBufferSource(), g = actx.createGain();
       src.buffer = bufs[e.name];
+      if (e.rate) src.playbackRate.value = e.rate;
       g.gain.value = e.vol;
       src.connect(g).connect(sfxGain);
       src.start(actx.currentTime + Math.max(0, e.t - t));

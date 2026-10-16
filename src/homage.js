@@ -113,12 +113,16 @@
   TL.postureWins = [];
   H.postureWindow = (t0, t1, from, to) => TL.postureWins.push({ t0, t1, from, to });
   H.buildPosture = () => {
+    // a parried spear lands when it strikes her (h.tA) and weighs four blocks
     for (const w of TL.postureWins) {
-      const hits = TL.shieldHits.filter((h) => h.t >= w.t0 && h.t < w.t1).sort((a, b) => a.t - b.t);
-      hits.forEach((h, i) => {
-        const base = U.lerp(w.from, w.to, (i + 1) / hits.length);
-        TL.boss.to(h.t, h.t + 0.05, { posture: Math.min(w.to, base + 0.05) }, 'outExpo').to(h.t + 0.05, h.t + 0.3, { posture: base }, 'out');
-      });
+      const hits = TL.shieldHits.filter((h) => h.t >= w.t0 && h.t < w.t1).map((h) => ({ t: h.deflect ? h.tA : h.t, w: h.deflect ? 4 : 1, d: h.deflect })).sort((a, b) => a.t - b.t);
+      const W = hits.reduce((a, h) => a + h.w, 0);
+      let acc = 0;
+      for (const h of hits) {
+        acc += h.w;
+        const base = U.lerp(w.from, w.to, acc / W);
+        TL.boss.to(h.t, h.t + 0.05, { posture: Math.min(w.to, base + (h.d ? 0.1 : 0.05)) }, 'outExpo').to(h.t + 0.05, h.t + (h.d ? 0.45 : 0.3), { posture: base }, 'out');
+      }
     }
   };
   // 危: a perilous thrust that cannot be blocked. The kanji flashes, the soul drops the
@@ -531,4 +535,56 @@
       H.flyer(t, t + far / v, cx + Math.cos(a) * 14, cy + Math.sin(a) * 14, cx + Math.cos(a) * far, cy + Math.sin(a) * far, { len: o.len ?? 56, sfx: false, warn: o.warn ?? 0.32, warnA: 0.18, clip: o.clip });
     }
   };
+  // ================================================================ rhythm game: judgement + combo
+  // every block is called (GOOD, PERFECT on the accents, PARRY on a deflect) over a combo
+  // counter at the right edge that burns brighter the longer the chain runs; a chain ends when
+  // the spears stop for more than two seconds
+  TL.chains = [];
+  const JUDGE = { good: ['GOOD', '#a8ffb0'], perfect: ['PERFECT', '#5fd8ff'], parry: ['PARRY!', '#ffe040'] };
+  const comboCol = (n) => (n >= 100 ? '#ff9a30' : n >= 50 ? '#ffe040' : n >= 25 ? '#5fd8ff' : n >= 10 ? '#bff0ff' : '#ffffff');
+  MV.late.push(() => {
+    let cur = null;
+    for (const h of TL.shieldHits.slice().sort((a, b) => a.t - b.t)) {
+      if (!cur || h.t - cur.ts[cur.ts.length - 1] > 2.2) TL.chains.push((cur = { ts: [], hs: [], ms: [] }));
+      cur.ts.push(h.t); cur.hs.push(h);
+    }
+    for (const c of TL.chains) {
+      if (c.ts.length < 20) continue; // not the few in the bridge's calm
+      for (const m of [25, 50, 100, 150]) if (c.ts.length >= m) { c.ms.push({ t: c.ts[m - 1], n: m }); H.sfx(c.ts[m - 1], 'Shimmer', 0.22); }
+      const t0 = c.ts[0], t1 = c.ts[c.ts.length - 1] + 1.1, X = 862;
+      TL.add({
+        t0, t1, z: 84, screen: true,
+        draw(ctx, emi, t) {
+          let lo = 0, hi = c.ts.length;
+          while (lo < hi) { const m = (lo + hi) >> 1; if (c.ts[m] <= t) lo = m + 1; else hi = m; }
+          const n = lo;
+          if (!n) return;
+          const h = c.hs[n - 1], dt = t - c.ts[n - 1];
+          const k = Math.min(U.clamp((t - t0) / 0.15), U.clamp((t1 - t) / 0.4));
+          // the call for the latest block
+          if (dt < 0.4) {
+            const [str, col] = JUDGE[h.deflect ? 'parry' : h.heavy ? 'perfect' : 'good'];
+            const pop = dt < 0.05 ? 0.6 : 0;
+            D.text(ctx, str, X, 214 - dt * 26 - pop * 8, { scale: 2 + pop, align: 'center', color: col, outline: '#000000', alpha: k * U.clamp((0.4 - dt) / 0.15) });
+          }
+          // the count: pumps on every block
+          const col = comboCol(n), pump = Math.exp(-dt * 16);
+          const sc = 4 + R(pump * 1.6);
+          // a soft glow behind the count once the chain is long (the screen layer has no bloom)
+          if (n >= 25) for (let i = 0; i < 3; i++) { ctx.globalAlpha = k * (0.07 + 0.06 * pump); ctx.fillStyle = col; ctx.fillRect(X - 40 - i * 14, 262 - i * 10, 80 + i * 28, 64 + i * 20); }
+          ctx.globalAlpha = 1;
+          D.text(ctx, String(n), X, 294 - sc * 8, { scale: sc, align: 'center', color: pump > 0.7 ? '#ffffff' : col, outline: '#000000', alpha: k, shake: n >= 50 && pump > 0.4 ? 2 : 0, seed: R(t * 30) });
+          D.text(ctx, 'COMBO', X, 342, { scale: 2, align: 'center', color: col, outline: '#000000', alpha: k * 0.9 });
+          for (const m of c.ms) {
+            const u = (t - m.t) / 0.6;
+            if (u < 0 || u > 1) continue;
+            const w = 80 + u * 120, hh = 50 + u * 60;
+            ctx.globalAlpha = k * (1 - u); ctx.strokeStyle = col; ctx.lineWidth = 4;
+            ctx.strokeRect(R(X - w), R(292 - hh), R(w * 2), R(hh * 2)); ctx.globalAlpha = 1;
+            D.text(ctx, m.n + ' COMBO!', X, 168 - u * 10, { scale: 2, align: 'center', color: '#ffffff', outline: col, alpha: k * (1 - u * u) });
+          }
+        },
+      });
+    }
+  });
 })();

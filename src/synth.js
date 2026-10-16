@@ -144,6 +144,15 @@
         o[i] = v * 0.6 + nz() * env(t, 0.001, 30) * 0.3;
       }
     }),
+    // a ricochet: a bright metallic zing sliding down, with a little vibrato
+    Ping: hit(0.32, 53, 0.6, (o, sr, nz) => {
+      let ph = 0, ph2 = 0;
+      for (let i = 0; i < o.length; i++) {
+        const t = i / sr, f = 1500 + 2300 * Math.exp(-t * 9) + 40 * Math.sin(TAU * 30 * t);
+        ph += (TAU * f) / sr; ph2 += (TAU * f * 2.76) / sr;
+        o[i] = (Math.sin(ph) + 0.35 * Math.sin(ph2)) * env(t, 0.001, 9) + nz() * env(t, 0.0005, 120) * 0.5;
+      }
+    }),
     // low rumble under the dust and the transformation
     Rumble: hit(2.4, 31, 0.6, (o, sr, nz) => {
       const lp = biquad(sr).set('lp', 120);

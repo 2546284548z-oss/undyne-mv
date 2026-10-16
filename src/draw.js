@@ -488,15 +488,17 @@
     const hit = o.hit || 0;
     const col = hit > 0.5 ? '#ff3030' : hit > 0.01 ? '#ffffff' : '#2a6bff';
     ctx.globalAlpha = a; ctx.fillStyle = col;
-    const n = 15, spread = 0.72;
+    // a block dents the arc: the middle is pushed in, the arc spreads wider
+    const n = 15, dent = o.dent || 0, spread = 0.72 * (1 + 0.22 * dent);
+    const rr = (i) => r - dent * 6 * (1 - Math.abs(i / (n - 1) - 0.5) * 2);
     for (let i = 0; i < n; i++) {
       const an = dir + (i / (n - 1) - 0.5) * 2 * spread;
-      for (let k = 0; k < 2; k++) ctx.fillRect(R(x + Math.cos(an) * (r + k * 2) - 2), R(y + Math.sin(an) * (r + k * 2) - 2), 4, 4);
+      for (let k = 0; k < 2; k++) ctx.fillRect(R(x + Math.cos(an) * (rr(i) + k * 2) - 2), R(y + Math.sin(an) * (rr(i) + k * 2) - 2), 4, 4);
     }
     ctx.globalAlpha = 1;
     if (emi) {
       emi.globalAlpha = a * (0.5 + hit * 0.5); emi.fillStyle = hit > 0.01 ? '#ffffff' : '#3080ff';
-      for (let i = 0; i < n; i++) { const an = dir + (i / (n - 1) - 0.5) * 2 * spread; emi.fillRect(R(x + Math.cos(an) * (r + 1) - 4), R(y + Math.sin(an) * (r + 1) - 4), 8, 8); }
+      for (let i = 0; i < n; i++) { const an = dir + (i / (n - 1) - 0.5) * 2 * spread; emi.fillRect(R(x + Math.cos(an) * (rr(i) + 1) - 4), R(y + Math.sin(an) * (rr(i) + 1) - 4), 8, 8); }
       emi.globalAlpha = 1;
     }
   };

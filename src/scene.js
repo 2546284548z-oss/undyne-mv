@@ -47,15 +47,24 @@
       const q = box.bulge[h.side];
       if (!q || Math.abs(k) > Math.abs(q[0])) box.bulge[h.side] = [k, h.u, 0.22];
     }
-    // the shield flashes white then red for a moment on each block
-    let sh = 0;
-    for (const h of TL.shieldHits) { const dt = t - h.t; if (dt >= 0 && dt < 0.12) sh = Math.max(sh, dt < 0.04 ? 1 : 0.4); }
+    // the shield flashes white then red for a moment on each block; the blow pushes the soul
+    // back a few px (heavier blocks further) and it springs home, the shield arc dented in
+    let sh = 0, dent = 0;
+    const soul = TL.soul.at(t);
+    for (const h of TL.shieldHits) {
+      const dt = t - h.t;
+      if (dt < 0 || dt > 0.4) continue;
+      if (dt < 0.12) sh = Math.max(sh, dt < 0.04 ? 1 : 0.4);
+      const v = MV.H.SIDE[h.side], k = (h.heavy ? 4.5 : 2.2) * Math.exp(-dt * 15) * Math.cos(dt * 40);
+      soul.x -= v[0] * k; soul.y -= v[1] * k;
+      dent = Math.max(dent, (h.heavy ? 1 : 0.6) * Math.exp(-dt * 20));
+    }
     return {
       t, fx, cam, box,
-      soul: TL.soul.at(t),
+      soul,
       soulCol: TL.soulCol.at(t),
       aura: TL.aura.at(t).v,
-      shield: Object.assign(TL.shield.at(t), { hit: sh }),
+      shield: Object.assign(TL.shield.at(t), { hit: sh, dent }),
       und: TL.und.at(t), show: TL.uShow.at(t), head: TL.head.at(t), melt: TL.melt.at(t),
       shadow: TL.shadow.at(t), rage: TL.rage.at(t).v,
       boss: TL.boss.at(t), bossName: TL.bossName.at(t), frame: TL.frame.at(t),
@@ -229,7 +238,7 @@
           MV.spr(ctx, MV.sil('soul_' + col, col === 'green' ? '#80ff90' : '#ff6070'), p.x, p.y, { rot: p.rot, scale: p.sc, alpha: trail * (0.55 - k * 0.09) });
         }
       }
-      if (col === 'green' && S.shield.a > 0.001) D.shield(ctx, emi, s.x, s.y, S.shield.dir, { alpha: S.shield.a * s.a, hit: S.shield.hit, ring: S.shield.ring });
+      if (col === 'green' && S.shield.a > 0.001) D.shield(ctx, emi, s.x, s.y, S.shield.dir, { alpha: S.shield.a * s.a, hit: S.shield.hit, ring: S.shield.ring, dent: S.shield.dent });
       D.soul(ctx, emi, s.x, s.y, { col, rot: s.rot, scale: s.sc, sq: s.sq, alpha: s.a, aura: S.aura, t });
     }
   };

@@ -50,7 +50,7 @@
   // sections register builders; they run after the assets are loaded
   MV.sections = [];
   MV.late = [];
-  MV.buildTimeline = () => { MV.sections.forEach((f) => f()); H.buildShield(); H.buildPosture(); };
+  MV.buildTimeline = () => { MV.sections.forEach((f) => f()); H.buildShield(); H.buildPosture(); H.buildLadder(); };
 
   // ---------------------------------------------------------------- sound effects
   // {t, name, vol}: played live through WebAudio and mixed into the export
@@ -60,11 +60,15 @@
   // the bottom band (the player's HUD) only rises for the player's own moments - the opening,
   // each FIGHT turn, the last blow - and drops away while she attacks
   H.band = (t, show, dur = 0.28) => TL.frame.to(t, t + dur, { bot: show ? MV.SAFE.bot : 0 }, show ? 'outBack' : 'in');
-  H.sfx = (t, name, vol = 1) => {
+  // rate: playback speed (pitch); returns the cue so a later pass can retune it
+  H.sfx = (t, name, vol = 1, rate) => {
     // limiter: one trigger of the same sound per 40 ms
     const k = name + Math.round(t / 0.04);
-    if (sfxLast[k]) { sfxLast[k].vol = Math.max(sfxLast[k].vol, vol); return; }
-    TL.sfx.push((sfxLast[k] = { t: +t.toFixed(4), name, vol }));
+    if (sfxLast[k]) { sfxLast[k].vol = Math.max(sfxLast[k].vol, vol); return sfxLast[k]; }
+    const e = { t: +t.toFixed(4), name, vol };
+    if (rate && rate !== 1) e.rate = rate;
+    TL.sfx.push((sfxLast[k] = e));
+    return e;
   };
   H.swell = (tHit, vol = 0.5, name = 'Swell') => H.sfx(tHit - (window.MV_SYNTH ? window.MV_SYNTH.len(name) : 1), name, vol);
   const at = (H.at = T.at);
@@ -139,10 +143,13 @@
     };
     if (kind === 'yel') H.sfx(tTurn, 'UndArrow', 0.35);
     H.sfx(t0, 'UndSpearAppear', o.vol ?? 0.12);
-    H.sfx(tHit, 'Block', o.hitVol ?? 0.5);
-    TL.shieldHits.push({ t: tHit, side: final });
-    // the block: sparks thrown back along the spear's line, the camera kicked away from it
     const heavy = o.heavy || kind === 'yel';
+    // the block bell is retuned later (H.buildLadder: it climbs through each bar)
+    const hit = { t: tHit, side: final, heavy, fill: !!o.fill, block: H.sfx(tHit, 'Block', o.hitVol ?? 0.5) };
+    TL.shieldHits.push(hit);
+    if (o.deflect) H.deflect(hit, kind);
+    if (o.stop) H.freeze(tHit, o.stop, { zoom: 0.025 }); // a micro hit-stop on the heaviest blocks
+    // the block: sparks thrown back along the spear's line, the camera kicked away from it
     const bx = () => TL.soul.at(tHit).x + SIDE[final][0] * stop, by = () => TL.soul.at(tHit).y + SIDE[final][1] * stop;
     const back = Math.atan2(SIDE[final][1], SIDE[final][0]);
     TL.burst(tHit, { x: bx, y: by, n: heavy ? 22 : 14, speed: [90, heavy ? 320 : 230], ang: [back - 0.9, back + 0.9], life: [0.12, 0.32], colors: kind === 'yel' ? ['#ffff40', '#ffffff', '#ffb000'] : ['#5fd8ff', '#ffffff', '#2a6bff'], size: [2, 3], z: 36 });
@@ -174,6 +181,61 @@
         D.arrow(ctx, emi, kind, p.dir, p.x, p.y, { alpha: fade, scale: H.ARROW });
       },
     });
+  };
+  H.SIDE = SIDE; H.OPP = OPP;
+  // the parry (B1): the blocked spear glances off the shield and flies straight back into her -
+  // sparks off her armour, she staggers, and her posture jumps (H.buildPosture)
+  TL.deflects = [];
+  H.deflect = (h, kind = 'blue') => {
+    const fly = 0.24, tA = h.t + fly, v = SIDE[h.side], stop = D.SHIELD_R + 3;
+    h.deflect = true; h.tA = tA;
+    TL.deflects.push(h);
+    H.sfx(h.t, 'Clang', 0.42); H.sfx(h.t + 0.005, 'Ping', 0.4);
+    H.sfx(tA, 'Hit', 0.55); H.sfx(tA, 'Impact', 0.32);
+    const col = kind === 'yel' ? '#ffe040' : '#9fe8ff';
+    // a quadratic arc from the shield, out along the spear's side and up into her chest
+    const path = (t, S) => {
+      const s0 = TL.soul.at(h.t), u = U.eOut(U.clamp((t - h.t) / fly));
+      const x0 = s0.x + v[0] * stop, y0 = s0.y + v[1] * stop;
+      // the arc swings wide (sideways for spears from above / below) so the flight reads
+      const sw = TL.deflects.indexOf(h) % 2 ? 1 : -1, px = -v[1] * 150 * sw, py = v[0] * 60 * sw;
+      const cx = x0 + v[0] * 90 + px, cy = y0 + v[1] * 50 - 120 + py;
+      const [x2, y2] = D.undynePt(S.und.x, S.und.y, 52, 64, S.und.sc);
+      const p = (a, b, c) => (1 - u) * (1 - u) * a + 2 * (1 - u) * u * b + u * u * c;
+      const d = (a, b, c) => 2 * (1 - u) * (b - a) + 2 * u * (c - b);
+      return { x: p(x0, cx, x2), y: p(y0, cy, y2), ang: Math.atan2(d(y0, cy, y2), d(x0, cx, x2)) };
+    };
+    TL.add({
+      t0: h.t, t1: tA, z: 47,
+      draw(ctx, emi, t, S) {
+        for (let k = 7; k >= 0; k--) {
+          const tt = Math.max(h.t, t - k * 0.014), p = path(tt, S);
+          if (k) { D.rect(ctx, p.x - 4, p.y - 4, 8, 8, k % 2 ? '#ffffff' : col, 0.75 - k * 0.09); if (emi) D.rect(emi, p.x - 8, p.y - 8, 16, 16, col, 0.5 - k * 0.05); continue; }
+          D.spear(ctx, emi, p.x, p.y, p.ang, { len: 64, scale: 1.4, color: col, glow: 1, glowCol: col });
+        }
+      },
+    });
+    const at2 = (S) => D.undynePt(S.und.x, S.und.y, 52, 64, S.und.sc);
+    TL.burst(tA, { x: () => at2({ und: TL.und.at(tA) })[0], y: () => at2({ und: TL.und.at(tA) })[1], n: 26, speed: [120, 360], life: [0.15, 0.4], colors: ['#ffffff', '#ffe060', col], size: [2, 4], z: 48 });
+    TL.ring(tA, () => at2({ und: TL.und.at(tA) })[0], () => at2({ und: TL.und.at(tA) })[1], { r0: 6, r1: 60, w: 5, dur: 0.25, color: '#ffffff', z: 48 });
+    H.punch(tA, 0.9, { flash: 0.06 });
+    TL.und.to(tA, tA + 0.02, { flash: 0.85, shake: 5, lean: -0.07 }, 'lin').to(tA + 0.02, tA + 0.3, { flash: 0, shake: 0, lean: 0 }, 'out');
+  };
+  // she flinches: the hurt face for a moment (after every section is built, so it restores the right face)
+  MV.late.push(() => {
+    for (const h of TL.deflects) { const f = TL.head.at(h.tA - 0.001); if (f !== 14) { TL.head.set(h.tA, 14); if (TL.head.at(h.tA + 0.24) === 14) TL.head.set(h.tA + 0.24, f); } }
+  });
+  // the block bells climb a ladder through each bar (C2): F minor pentatonic, from the C below
+  // (the bell is an F#, so every step is shifted a semitone down into the song's key)
+  H.LADDER = [-5, -2, 0, 3, 5, 7, 10, 12];
+  H.buildLadder = () => {
+    let bar = -1, i = 0;
+    for (const h of TL.shieldHits.slice().sort((a, b) => a.t - b.t)) {
+      const b = Math.floor(T.barOf(h.t) + 0.03);
+      if (b !== bar) { bar = b; i = 0; }
+      const st = H.LADDER[Math.min(i++, H.LADDER.length - 1)] - 1;
+      if (h.block) h.block.rate = 2 ** (st / 12);
+    }
   };
   // after all spears are placed: turn the shield to meet each one just before it lands
   H.buildShield = () => {
@@ -571,6 +633,56 @@
     const g = base(t0).ghost;
     TL.und.to(t0, t0 + 0.04, { ghost: 0.9 }, 'out').to(t1, t1 + 0.3, { ghost: g }, 'out');
   };
+  // the plunge (B2): she comes for the soul herself. A column of the red box flashes, she
+  // springs up out of the picture and drives down through it spear-first, trailing
+  // afterimages, and buries the spear in the box floor; then she is gone and drops back home.
+  // The column (her body and the spear) is a hazard while she is in it.
+  H.plunge = (tHit, x, o = {}) => {
+    const home = TL.und.at(tHit - 0.6), hx = o.home ?? home.x, hy = L.und[1];
+    const tw = tHit - (o.warn ?? 0.5), tUp = tHit - 0.3, tFall = tHit - 0.12, tGone = tHit + 0.24, sc = o.sc ?? 1.3;
+    const HW = 34; // half width of the column she fills
+    H.sfx(tw, 'Warning', 0.3); H.sfx(tUp, 'Whoosh', 0.45); H.sfx(tFall, 'SwipeShort', 0.5);
+    H.sfx(tHit, 'Slam', 0.6); H.sfx(tHit, 'Boom', 0.35); H.sfx(tHit, 'UndSpearRise', 0.45);
+    // at home: the crouch, the spring out of the top of the picture; back after the strike
+    TL.und.to(tw, tUp, { lean: -0.06, arm: 1.1 }, 'out');
+    TL.und.to(tUp, tFall, { y: hy - 520, ghost: 0.8 }, 'inExpo');
+    TL.und.set(tGone, { x: hx, y: hy - 420, arm: 0, lean: 0 }).to(tGone, tGone + 0.2, { y: hy, ghost: o.ghost ?? 0 }, 'outExpo');
+    H.punch(tGone + 0.2, 0.5);
+    const bodyY = (t, b) => { // her feet: from far above to the floor of the box (the spear tip below)
+      const floor = b.y + b.h - 64;
+      if (t >= tHit) return floor;
+      return U.lerp(-260, floor, U.eIn(U.clamp((t - tFall) / (tHit - tFall))));
+    };
+    const tipY = (t, b) => Math.min(bodyY(t, b) + 64, b.y + b.h);
+    TL.add({
+      t0: tw, t1: tGone + 0.05, z: 38, kind: 'white',
+      hit(t, sx, sy) { if (t < tFall || t > tGone) return false; const b = TL.box.at(t); return Math.abs(sx - x) < HW + SOUL_R && sy < tipY(t, b) + SOUL_R && sy > b.y - 400; },
+      draw(ctx, emi, t, S) {
+        const b = S.box;
+        if (t < tFall) { // the warning column
+          const k = U.clamp((t - tw) / 0.08);
+          D.spearWarn(ctx, emi, x - HW, b.y, HW * 2, b.h, t, k * 0.9);
+          return;
+        }
+        const fy = bodyY(t, b), out = t > tGone - 0.06 ? U.clamp((tGone - t) / 0.06) : 1;
+        const pose = { head: 12, arm: -0.55, lean: 0, t, scale: sc, glow: 0.4, eye: 1.4 };
+        // afterimages up the column
+        if (t < tHit + 0.1) for (let k = 4; k >= 1; k--) {
+          const yy = bodyY(t - k * 0.022, b);
+          D.undyne(ctx, null, x, yy, Object.assign({}, pose, { sil: k % 2 ? '#2a6bff' : '#5fd8ff', alpha: (0.55 - k * 0.1) * out }));
+        }
+        D.spear(ctx, emi, x + 2, tipY(t, b), Math.PI / 2, { len: 120, scale: 1.3, alpha: out, glow: 0.8 });
+        D.undyne(ctx, emi, x, fy, Object.assign({}, pose, { alpha: out, flash: t >= tHit && t < tHit + 0.05 ? 1 : 0 }));
+      },
+    });
+    // the strike: the floor of the box buckles, a shockwave rolls out along it
+    const b = TL.box.at(tHit), fl = b.y + b.h;
+    H.hit(tHit, 1.2, { dy: 1, flash: 0.25 });
+    H.boxHit(tHit, 'bottom', U.clamp((x - b.x) / b.w), 12);
+    TL.burst(tHit, { x, y: fl - 4, n: 40, speed: [120, 420], ang: [Math.PI * 1.05, Math.PI * 1.95], life: [0.2, 0.55], g: 500, colors: ['#ffffff', '#9fe8ff', '#5f7fa8'], size: [2, 4], z: 45 });
+    TL.ring(tHit, x, fl - 6, { r0: 8, r1: 120, w: 5, dur: 0.3, color: '#ffffff', z: 44 });
+    TL.rumble.to(tHit, tHit + 0.02, { v: 6 }, 'lin').to(tHit + 0.02, tHit + 0.5, { v: o.rest ?? 1.6 }, 'out');
+  };
   H.roar = (t, str, o = {}) => {
     H.face(t, o.head ?? 12);
     H.face(t + (o.len ?? 1.2), o.after ?? 0);
@@ -584,6 +696,22 @@
   };
   // a burst of spears down one side in quick succession (the shield holds, sparks pile up)
   H.flurry = (t0, side, n = 4, step = T.s16, o = {}) => { for (let i = 0; i < n; i++) H.green(t0 + i * step, side, Object.assign({ travel: 0.4, hitVol: 0.42 }, o)); };
+  // the rush (A2): up to eight spears down one side, accelerating from 8ths into 16ths, each one
+  // faster than the last; the last comes heavy from the other side - and is parried back at her
+  H.RUSH = [6, 8, 10, 11, 12, 13, 14, 15];
+  H.rush = (b, side, o = {}) => {
+    const n = o.n ?? 8, slots = H.RUSH.slice(8 - n);
+    H.sfx(at(b, 0, slots[0]) - 0.48, 'Warning', 0.22);
+    slots.forEach((s, i) => {
+      const last = i === slots.length - 1, u = i / (slots.length - 1);
+      H.green(at(b, 0, s), last ? OPP[side] : side, {
+        travel: U.lerp(o.travel ?? 0.46, 0.32, u), hitVol: last ? 0.62 : 0.4, vol: i % 2 ? 0.04 : 0.09,
+        heavy: last, deflect: last && o.deflect !== false, stop: last ? 0.05 : 0,
+      });
+    });
+    H.throwArm(at(b, 0, slots[0]) - 0.1, 0.9);
+    H.throwArm(at(b, 0, 15) - 0.05, 1.1);
+  };
   // red soul: a fence of spears from one wall with one gap at gapX
   H.fence = (tw, tHit, side, gapX, o = {}) => {
     const b = MV.LAYOUT.boxRed, gap = o.gap ?? 40;

@@ -3,7 +3,8 @@
 //   72 - 79  green: the densest shield storm yet, posture again, two more 危; she dashes every bar
 //   80 - 87  red: four spell cards with new danmaku - a snaking corridor, a lattice, spear
 //            flowers, the last spell; a ring of 24 spears no one could dodge, broken by full TP
-//   88 - 93  the box shatters: the whole screen is the arena (walls, flowers, giant spears)
+//   88 - 89  the box shatters: the whole screen is the arena (walls of spears)
+//   90 - 93  the chase over the falls, seen from the side (tl_chase.js)
 //   93 - 95  the box rebuilds; her spears ring the soul; 95's drum fill sends them in one per
 //            16th, the shield spinning round
 //   96       the last hit lands on the last chord: the freeze frame; the bar empties for good.
@@ -60,8 +61,12 @@
     const flur72 = { 73: 'l', 79: 'u' };
     for (let b = 72; b < 80; b++) {
       const f = flur72[b];
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: 0.8, gap: 2, yel: 0.5, travel: 0.42, from: b === 72 ? 8 : 0, to: peril72[b] ? 9 : f ? 12 : 16 });
-      if (f) H.flurry(at(b, 3), f, 4, T.s16, { travel: 0.36 });
+      // everything at once: every free 8th, a burst crowning each 2-bar phrase, two rushes
+      H.greenBar(b, {
+        tone: 0.5, snare: 0.5, kick: 0.8, gap: 2, yel: 0.5, travel: 0.42, from: b === 72 ? 8 : 0, fill: 1,
+        parry: b === 74 || b === 76 || b === 78, burst: b === 74 || b === 76 || b === 78 ? [12, 16] : null, to: peril72[b] ? 9 : f ? 5 : 16,
+      });
+      if (f) H.rush(b, f, { travel: 0.42, deflect: b !== 79 });
       if (peril72[b]) H.peril(at(b, 3), { dir: peril72[b] });
       for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.6);
       if (b > 72) { H.dash(at(b) - 0.1, at(b) + 0.08, xs72[b - 72]); H.snap(at(b), { zoom: b % 2 ? 1.48 : 1.36, x: 480 + (xs72[b - 72] - 480) * 0.3, roll: (b % 2 ? -1 : 1) * 0.1 }); }
@@ -171,29 +176,7 @@
       H.throwArm(tc - 0.1, 0.8);
       prevY = gy;
     });
-    // 90 - 91: flowers from the screen edges, the soul in the gaps
-    const spots2 = [[380, 420], [586, 400], [480, 476], [350, 360]];
-    const centres2 = [[60, 300], [900, 520], [900, 300], [80, 520], [480, 230], [60, 470], [900, 300], [480, 230]];
-    spots2.forEach(([x, y], i) => {
-      const t = at(90 + (i >> 1), (i % 2) * 2);
-      H.soulTo(t - 0.3, t - 0.18, x, y, 'outExpo');
-      H.bloom(t, ...centres2[i * 2], 14, { v: 1100, len: 70 });
-      H.bloom(t, ...centres2[i * 2 + 1], 14, { v: 1100, len: 70 });
-    });
-    // 92 - 93: giant spears across the screen on the beats, the soul circling
-    const orbit = (t) => { const u = (t - at(92)) / (T.bar * 2) * U.TAU; return [480 + Math.cos(u) * 110, 410 + Math.sin(u) * 60]; };
-    H.soulTo(at(92) - 0.3, at(92) - 0.1, ...orbit(at(92)), 'outExpo');
-    for (let s = 1; s <= 27; s++) { const t = at(92, 0, s); TL.soul.to(t - T.s16, t, Object.fromEntries([['x', orbit(t)[0]], ['y', orbit(t)[1]]]), 'lin'); }
-    for (let k = 0; k < 7; k++) {
-      const tc = at(92 + (k >> 2), k % 4), [sx, sy] = orbit(tc), ang = [0.45, -0.45, 1.2, -1.2, 0.2, -0.7, 0.9][k];
-      const nx = -Math.sin(ang), ny = Math.cos(ang), side = k % 2 ? 1 : -1;
-      const px = sx + nx * 104 * side, py = sy + ny * 104 * side, Lh = 900, v = 2000;
-      H.flyer(tc - Lh / v, tc + Lh / v, px - Math.cos(ang) * Lh, py - Math.sin(ang) * Lh, px + Math.cos(ang) * Lh, py + Math.sin(ang) * Lh, { len: 300, scale: 2.2, width: 16, warn: 0.45, warnW: 18, warnA: 0.22, vol: 0.35, z: 32 });
-      H.punch(tc, 0.9);
-    }
-    H.barrage(at(92), 3, { vol: 0.2 }); H.barrage(at(93), 3, { vol: 0.2 });
-    H.say(at(89), at(90, 2), ['我不会……', '输给你的！'], { cps: 14 });
-    H.face(at(89), 2); H.face(at(90, 2), 6);
+    // 90 - 93: the chase on the bridge (tl_chase.js)
     // 93: the box pulls itself back together round the soul
     H.soulTo(at(93, 3) - 0.1, at(93, 3) + 0.1, L.soul[0], L.soul[1], 'outExpo');
     TL.box.set(at(93, 3), Object.assign({ draw: 0, fill: 0 }, L.boxGreen)).to(at(93, 3), at(93, 3, 2), { draw: 1 }, 'outExpo');

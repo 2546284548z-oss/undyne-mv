@@ -185,12 +185,14 @@
     H.tpWindow(at(28), at(43, 2), 0, 0.6);
     H.say(at(29, 2), at(31), ['给我动起来！'], { cps: 14 });
     H.face(at(29, 2), 9); H.face(at(31), 0);
-    H.leap(at(31, 2), at(32), 480, 160, { fx: { flash: 0.15, amp: 9 }, rest: 1.6 });
+    // she comes down into the box herself (the plunge), away from the soul; she is back on her
+    // ledge for the rain
+    H.plunge(at(32), 620, { home: 600, rest: 1.6 });
 
     // ------------------------------------------------------------ 32 - 35: rain, two spears a hit
     H.rain(32, 300, 660);
     H.rain(34, 660, 300);
-    H.dash(at(32) + 0.02, at(32, 1), 600); H.dash(at(33), at(33, 0, 2), 360);
+    H.dash(at(33), at(33, 0, 2), 360);
     H.dash(at(34), at(34, 0, 2), 380); H.dash(at(35), at(35, 0, 2), 590);
     for (const b of [32, 33, 34, 35]) { H.throwArm(at(b, 0, 2), 0.8); H.throwArm(at(b, 2, 2), 0.8); }
     H.cam(at(32), at(34), { roll: 0.05 }, 'inOut');
@@ -225,6 +227,7 @@
     H.soulTo(at(42, 1, 2), at(43, 2), 600, BOT - 40, 'inOut');
     for (const s of [6, 8, 10, 12, 14]) { const t = at(42, 0, s), sx = TL.soul.at(t).x; H.flyer(t - 0.3, t + 0.12, sx - 130, TOP - 70, sx - 130, BOT + 80, { len: 80, clip: true, sfx: false }); H.flyer(t - 0.3, t + 0.12, U.clamp(sx + 140, 270, 690), TOP - 70, U.clamp(sx + 140, 270, 690), BOT + 80, { len: 80, clip: true, sfx: false }); H.punch(t, 0.4); }
     for (const k of [0, 1]) { H.sweep(at(43, k), TOP + 26, k ? 1 : -1, { warn: 0.2 }); H.sweep(at(43, k, 2), MID - 6, k ? -1 : 1, { warn: 0.2 }); }
+    H.plunge(at(43), 330, { home: 480, warn: 0.4 });
     TL.und.to(at(43, 2), at(44), { eye: 0.6 }, 'inOut');
     TL.shadow.to(at(43), at(44), { eye: 1 }, 'inOut');
     H.say(at(42, 2), at(43, 2), ['不会让你过去的！'], { cps: 16 });
@@ -262,8 +265,15 @@
     const flur44 = { 49: 'd', 53: 'r' };
     for (let b = 44; b < 59; b++) {
       const f = flur44[b];
-      H.greenBar(b, { tone: 0.5, snare: 0.5, kick: b >= 52 ? 0.85 : 0, gap: 2, yel: 0.4, travel: b >= 52 ? 0.42 : 0.46, from: b === 44 ? 2 : 0, to: peril44[b] ? 9 : b === 58 ? 12 : f ? 12 : 16 });
-      if (f) H.flurry(at(b, 3), f, 4);
+      // denser than the first time through: the 8ths fill in, 16th bursts at the peak, rushes
+      // of eight; parries only once the floor has risen back (she must be upright to take them)
+      const flat = b >= 52;
+      H.greenBar(b, {
+        tone: 0.5, snare: 0.5, kick: flat ? 0.85 : 0, gap: 2, yel: 0.4, travel: flat ? 0.42 : 0.46, from: b === 44 ? 2 : 0,
+        fill: b < 48 ? 0.55 : b < 52 ? 0.7 : 0.9, parry: flat && b % 2 === 0, burst: b === 54 || b === 56 ? [12, 16] : null,
+        to: peril44[b] ? 9 : b === 58 ? 12 : f ? 5 : 16,
+      });
+      if (f) H.rush(b, f, { deflect: flat });
       if (peril44[b]) H.peril(at(b, 3), { dir: peril44[b], screen: b < 52 });
       if (b % 2 === 0) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 0, 2), 2, { vol: 0.2 }); }
       if (b % 2 === 1 && b < 52) H.lunge(at(b), 0.5);
