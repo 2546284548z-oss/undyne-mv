@@ -2,7 +2,7 @@
 
 基于 UNDERTALE 曲目 *Battle Against a True Hero*（150 BPM）编排的像素演出：不死的安黛因之战。无构建步骤，打开 `index.html` 即可播放，全片 2 分 57.8 秒。
 
-**成片下载：[video/undyne_mv_v4_720p30.mp4](video/undyne_mv_v4_720p30.mp4)**（第四版 · 电影画幅 + 3D 版，1280×720 30fps，2:57.8，87 MB，已混入音乐与音效；在 GitHub 页面点 “Download raw file” 下载）
+**成片下载：[video/undyne_mv_v5_720p30.mp4](video/undyne_mv_v5_720p30.mp4)**（第五版 · 电影画幅 + 3D 版，1280×720 30fps，2:57.8，87 MB，已混入音乐与音效；在 GitHub 页面点 “Download raw file” 下载）
 
 做法沿用 [guiguisocute/mtt-mv-pub](https://github.com/guiguisocute/mtt-mv-pub)（镁塔顿演出战）：Canvas 像素世界 + WebGL 后期，所有画面都是时间的纯函数，按音乐分析出的拍点编舞；导出时用无头 Chromium 逐帧渲染再用 ffmpeg 编码，不用任何视频模型。
 
