@@ -147,12 +147,17 @@
     });
 
     // ------------------------------------------------------------ 90 - 91
-    ground(at(90, 1)); jump(at(90, 1));
+    // doubled: the planks burst in pairs (one jump clears both), spears come low in pairs, and
+    // every beat the soul stays on the ground a high spear skims over it
+    const ground2 = (t) => { ground(t - 0.04); ground(t + 0.04); jump(t); };
+    throwAt(at(90, 0, 2), true);
+    ground2(at(90, 1));
     throwAt(at(90, 2), true);
-    ground(at(90, 3)); jump(at(90, 3));
-    throwAt(at(91, 0, 2), false); jump(at(91, 0, 2));
-    ground(at(91, 1, 2)); jump(at(91, 1, 2));
+    ground2(at(90, 3));
+    throwAt(at(91, 0, 2) - 0.04, false); throwAt(at(91, 0, 2) + 0.04, false); jump(at(91, 0, 2));
+    ground2(at(91, 1, 2));
     throwAt(at(91, 2, 2), true);
+    throwAt(at(91, 3), true);
     H.say(at(90, 1), at(91, 3), ['我不会……', '输给你的！'], { cps: 14 });
     H.face(at(90), 12); H.face(at(90, 1), 2); H.face(at(91, 3), 12);
 
@@ -167,6 +172,7 @@
     TL.und.hop(at(92, 0, 2), at(92, 2), { x: 200, y: UY }, 320, 'y', 'lin');
     H.hit(tLand, 1.3, { dy: 1, flash: 0.3 }); H.sfx(tLand, 'Slam', 0.6); H.sfx(tLand, 'Boom', 0.4); H.sfx(tLand, 'UndSpearRise', 0.5);
     H.shock(tLand, 770, GY, { r: 260, ang: [Math.PI * 1.05, Math.PI * 1.95] });
+    H.fracture(tLand, 770, GY - 30, { flash: 0.2, n: 8 });
     TL.rumble.to(tLand, tLand + 0.02, { v: 7 }, 'lin').to(tLand + 0.02, tLand + 0.6, { v: 1.2 }, 'out');
     H.face(tLand, 12);
     const stuckX = (t) => SX + V * (at(92, 1) - t), STUCK = 84;
@@ -176,10 +182,10 @@
       draw(ctx, emi, t) { const x = stuckX(t); D.spear(ctx, emi, x, GY + 10, Math.PI / 2, { len: STUCK + 40, scale: 1.2, glow: 0.6 }); },
     });
     jump(at(92, 1), 108, 0.44);
-    throwAt(at(92, 2, 2), false); jump(at(92, 2, 2));
-    ground(at(92, 3, 2)); jump(at(92, 3, 2));
-    // ------------------------------------------------------------ 93: three at once, one long jump
-    ground(at(93)); ground(at(93, 0, 2)); ground(at(93, 1));
+    throwAt(at(92, 2, 2) - 0.04, false); throwAt(at(92, 2, 2) + 0.04, false); jump(at(92, 2, 2));
+    ground2(at(92, 3, 2));
+    // ------------------------------------------------------------ 93: six at once, one long jump
+    for (const tt of [at(93), at(93, 0, 2), at(93, 1)]) { ground(tt - 0.04); ground(tt + 0.04); }
     jump(at(93, 0, 2), 120, 0.76);
     H.sfx(at(93), 'Warning', 0.3);
     TL.und.to(at(92, 3), at(93), { x: 260 }, 'inOut');

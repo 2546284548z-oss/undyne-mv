@@ -15,7 +15,7 @@
   //     yel (chance of a yellow on a strong accent), travel, skip(s) -> true to leave a slot out,
   //     from, to (16th range in the bar), throws (arm on the bar's first spear),
   //     fill (0..1: chance of a lighter spear on each hi-hat 8th the accents leave free),
-  //     burst ([s0, s1): every 16th in the range, the shield wheeling round clockwise),
+  //     burst ([s0, s1) or a list of them: every 16th in the range, the shield wheeling round clockwise),
   //     parry (the bar's first strong accent is parried back at her)}
   // Three layers: the accents (claps, the riff) carry the heavy blocks, the hi-hat 8ths fill
   // in between as the phrases build, 16th bursts crown the climaxes.
@@ -25,19 +25,20 @@
     const th = { snare: o.snare ?? 0.5, tone: o.tone ?? 0.8, kick: o.kick ?? 0 };
     const out = [];
     let last = -99, parried = !o.parry;
+    const BR = !o.burst ? [] : Array.isArray(o.burst[0]) ? o.burst : [o.burst]; // one range or several
     for (let s = o.from ?? 0; s < (o.to ?? 16); s++) {
       if (o.skip && o.skip(s)) continue;
       const v = Math.max(th.snare ? (H.acc(b, 0, s, 'snare') > th.snare ? 1 : 0) : 0,
         th.tone ? (H.acc(b, 0, s, 'tone') > th.tone ? 1 : 0) : 0,
         th.kick ? (H.acc(b, 0, s, 'kick') > th.kick ? 1 : 0) : 0, o.add && o.add.includes(s) ? 1 : 0);
-      const burst = o.burst && s >= o.burst[0] && s < o.burst[1];
+      const br = BR.find((r) => s >= r[0] && s < r[1]), burst = !!br;
       const fill = !v && !burst && o.fill && s % 2 === 0 && H.acc(b, 0, s, 'hat') > 0.2 && U.hash(b * 16.13 + s * 1.7 + 0.37) < o.fill;
       if (!v && !burst && !fill) continue;
       if (s - last < (burst ? 1 : o.gap ?? 2)) continue;
       last = s;
       const t = at(b, 0, s), p = H.lead(b, 0, s);
       let side;
-      if (burst && s > o.burst[0]) side = CW[prev.side];
+      if (burst && s > br[0]) side = CW[prev.side];
       else if (p > 0 && p - prev.pitch >= 3) side = prev.side === 'u' ? 'r' : 'u';
       else if (p > 0 && prev.pitch - p >= 3) side = prev.side === 'd' ? 'l' : 'd';
       else side = prev.side === 'l' ? 'r' : prev.side === 'r' ? 'l' : U.hash(b * 16 + s) < 0.5 ? 'l' : 'r';
@@ -46,8 +47,8 @@
       const parry = !parried && strong && !yel && s - prev.s16 >= 2;
       if (parry) parried = true;
       H.green(t, side, {
-        kind: yel ? 'yel' : 'blue', travel: o.travel, dist: o.dist, heavy: strong && o.heavy !== false, deflect: parry,
-        hitVol: fill || (burst && s > o.burst[0]) ? 0 : o.vol, vol: fill || burst ? 0.05 : undefined, fill,
+        kind: yel ? 'yel' : 'blue', travel: o.travel, dist: o.dist, heavy: strong && o.heavy !== false, deflect: parry, volley: o.volley && strong && !yel,
+        hitVol: fill || (burst && s > br[0]) ? 0 : o.vol, vol: fill || burst ? 0.05 : undefined, fill,
       });
       out.push({ t, side });
       prev = { side: yel ? { u: 'd', d: 'u', l: 'r', r: 'l' }[side] : side, pitch: p > 0 ? p : prev.pitch, t, s16: s };

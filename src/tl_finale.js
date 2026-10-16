@@ -59,19 +59,29 @@
     H.resetGreen('u');
     const xs72 = [480, 370, 590, 400, 560, 360, 600, 480];
     const flur72 = { 73: 'l', 79: 'u' };
+    // phase two is twice everything: every free 8th, 16th bursts on beats 2 and 4 of every bar,
+    // two rushes; she blinks across the arena every half bar; the screen fractures on each phrase
+    const xs72b = [480, 590, 370, 600, 360, 580, 400, 560];
     for (let b = 72; b < 80; b++) {
       const f = flur72[b];
-      // everything at once: every free 8th, a burst crowning each 2-bar phrase, two rushes
       H.greenBar(b, {
-        tone: 0.5, snare: 0.5, kick: 0.8, gap: 2, yel: 0.5, travel: 0.42, from: b === 72 ? 8 : 0, fill: 1,
-        parry: b === 74 || b === 76 || b === 78, burst: b === 74 || b === 76 || b === 78 ? [12, 16] : null, to: peril72[b] ? 9 : f ? 5 : 16,
+        tone: 0.5, snare: 0.5, kick: 0.8, gap: 1, yel: 0.5, travel: 0.42, from: b === 72 ? 8 : 0, fill: 1, volley: true,
+        parry: b === 74 || b === 76 || b === 78,
+        burst: f ? [[0, 4]] : peril72[b] ? [[4, 8]] : b === 72 ? [[12, 16]] : [[4, 8], [12, 16]],
+        to: peril72[b] ? 9 : f ? 5 : 16,
       });
       if (f) H.rush(b, f, { travel: 0.42, deflect: b !== 79 });
       if (peril72[b]) H.peril(at(b, 3), { dir: peril72[b] });
-      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.6);
+      for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.95);
       if (b > 72) { H.dash(at(b) - 0.1, at(b) + 0.08, xs72[b - 72]); H.snap(at(b), { zoom: b % 2 ? 1.48 : 1.36, x: 480 + (xs72[b - 72] - 480) * 0.3, roll: (b % 2 ? -1 : 1) * 0.1 }); }
-      if (b % 2 === 0 && b > 72) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.barrage(at(b, 2), 3, { vol: 0.22 }); }
+      if (b > 72 && !peril72[b]) H.dash(at(b, 2) - 0.08, at(b, 2) + 0.06, xs72b[b - 72]);
+      if (b % 2 === 0 && b > 72) { H.swing(at(b), b % 4 ? 'red' : 'green', b % 4 === 2); H.fracture(at(b), 480, 300, { flash: 0.28, flashCol: [1, 0.25, 0.2] }); }
+      if (b > 72) H.barrage(at(b, 2), 4, { vol: 0.18 });
     }
+    TL.rumble.to(at(73), at(74), { v: 3.6 }, 'inOut');
+    TL.shadow.to(at(73), at(74), { sc: 8.6, y: 840 }, 'inOut');
+    TL.post.to(at(73), at(74), { vig: 0.58 }, 'inOut');
+    H.embers(at(72), at(96) + 0.1);
     H.speed(at(72, 2), at(80), { k: 0.35 });
     H.cam(at(76), at(78), { pitch: 0.24 }, 'inOut');
     H.cam(at(78), at(79, 3), { pitch: 0 }, 'inOut');
@@ -87,6 +97,9 @@
     H.dash(at(80) - 0.1, at(80) + 0.06, 480);
     for (let b = 80; b < 88; b++) { for (const s of H.hits(b, 'kick', 0.8)) H.punch(at(b, 0, s), 0.4); H.throwArm(at(b, 1), 0.8); H.throwArm(at(b, 3), 0.8); }
 
+    for (const b of [82, 84, 86]) H.fracture(at(b), 480, 330, { flash: b === 86 ? 0.12 : 0.25, flashCol: [1, 0.25, 0.2], n: 8 });
+    TL.rumble.to(at(80), at(81), { v: 3 }, 'inOut');
+    H.plunge(at(85, 3), 620, { home: 480, warn: 0.4, rest: 3 });
     // 80 - 81 枪符「千本之矛」: two curtains of falling spears on every 16th, a corridor
     // snaking between them; the soul rides the corridor
     H.spell(at(80), at(81, 3, 3), '枪符「千本之矛」');
@@ -96,6 +109,9 @@
     for (let s = 2; s <= 28; s++) {
       const tc = at(80, 0, s), yA = TOP - 70, yB = BOT + 80, f = (yC - yA) / (yB - yA), dur = 0.36;
       for (const side of [-1, 1]) { const x = cxAt(s) + side * 54; H.flyer(tc - dur * f, tc - dur * f + dur, x, yA, x, yB, { len: 70, clip: true, sfx: s % 4 === 0 && side < 0, vol: 0.12 }); }
+      // doubled: an outer curtain falling, and the inner one answered from below on the off 16ths
+      for (const side of [-1, 1]) { const x = cxAt(s) + side * 104; H.flyer(tc - dur * f, tc - dur * f + dur, x, yA, x, yB, { len: 70, clip: true, sfx: false }); }
+      if (s % 2) for (const side of [-1, 1]) { const x = cxAt(s) + side * 78, g = (yB - yC) / (yB - yA); H.flyer(tc - dur * g, tc - dur * g + dur, x, yB, x, yA, { len: 70, clip: true, sfx: false }); }
     }
     // 82 - 83 水符「瀑布之雨・极」: a lattice - columns fall on every beat, rows sweep across;
     // the columns shift half a cell each beat and the soul steps into the new cell
@@ -110,33 +126,37 @@
       H.sweep(tc, MID - 44, k % 2 ? 1 : -1, { warn: 0.15, dur: 0.45 });
       H.sweep(tc + T.s16 * 2, MID + 44, k % 2 ? -1 : 1, { warn: 0.15, dur: 0.45 });
       if (k < 7) H.soulTo(tc + 0.13, tc + 0.21, cells[k + 1], MID, 'outExpo');
+      // doubled: on the off-beat the next beat's columns burst up from the floor first
+      if (k < 7) { const tu = tc + 0.26, g = (yB - MID) / (yB - yA); for (let x = even ? 342 : 296; x <= 690; x += 92) H.flyer(tu - dur * g, tu - dur * g + dur, x, yB, x, yA, { len: 80, clip: true, sfx: false }); H.sfx(tu, 'UndSpearRise', 0.22); }
     }
     // 84 - 85 矛符「绽放」: spear flowers burst from the box's edges, two a stop; the soul
     // always sits in a gap between the petals, and moves on between bursts
     H.spell(at(84), at(85, 3, 3), '矛符「绽放」');
     const spots = [[400, 362], [566, 346], [470, 398], [356, 332]];
     const centres = [[262, 296], [698, 414], [698, 296], [262, 414], [480, 292], [262, 300], [698, 300], [480, 420]];
+    const extra = [[[480, 420], [698, 296]], [[262, 414], [480, 292]], [[262, 296], [698, 414]], [[698, 420], [480, 296]]];
     spots.forEach(([x, y], i) => {
       const t = at(84 + (i >> 1), (i % 2) * 2);
       H.soulTo(t - 0.3, t - 0.18, x, y, 'outExpo');
       H.bloom(t, ...centres[i * 2], 12, { clip: true, v: 950 });
       H.bloom(t, ...centres[i * 2 + 1], 12, { clip: true, v: 950 });
+      for (const c of extra[i]) H.bloom(t + T.s16, ...c, 10, { clip: true, v: 1000, look: 0.18 }); // doubled
       H.punch(t + T.beat, 0.6); H.pulse(t + T.beat, 0.4, '#5fd8ff');
     });
     // 86 - 87 决心「不死之身」: the last spell - eye beams on every beat with a flower from her
     // hand on top; then 24 spears close in from everywhere. The TP is full: the soul breaks them.
     H.spell(at(86), at(87, 1, 2) + 0.2, '决心「不死之身」', { r: 180 });
     H.beams(86, [0, 1, 2, 3], { x: 480 });
-    for (const k of [0, 2]) H.bloom(at(86, k), 480, 238, 12, { v: 900 });
+    for (const k of [0, 1, 2, 3]) H.bloom(at(86, k), 480, 238, k % 2 ? 16 : 12, { v: 900 });
     const tRing = at(87), tBurst = at(87, 1, 2);
     H.soulTo(at(86, 3) + 0.24, at(86, 3) + 0.34, 480, MID, 'outExpo');
     H.sfx(tRing, 'UndSpearAppear', 0.5); H.sfx(tRing, 'Warning', 0.35);
-    for (let i = 0; i < 24; i++) {
-      const a = (i / 24) * U.TAU;
+    for (let i = 0; i < 48; i++) {
+      const a = (i / 24) * U.TAU + (i >= 24 ? Math.PI / 24 : 0), r0 = i >= 24 ? 210 : 150;
       TL.add({
         t0: tRing, t1: tBurst, z: 30,
         draw(ctx, emi, t, S) {
-          const u = U.clamp((t - tRing) / (tBurst - tRing)), r = U.lerp(150, 46, U.eIn(u)) + Math.sin(t * 30 + i) * 2;
+          const u = U.clamp((t - tRing) / (tBurst - tRing)), r = U.lerp(r0, r0 - 104, U.eIn(u)) + Math.sin(t * 30 + i) * 2;
           D.spear(ctx, emi, S.soul.x + Math.cos(a) * r, S.soul.y + Math.sin(a) * r, a + Math.PI, { len: 60, alpha: U.clamp((t - tRing) / 0.12) });
         },
       });
@@ -174,6 +194,8 @@
       H.soulTo(tm, tm + 0.1, 480, gy, 'outExpo');
       H.wall(tc, i % 2 ? -1 : 1, gy);
       H.throwArm(tc - 0.1, 0.8);
+      // doubled: a second wall from the other side on the off-beat, its gap where the soul goes next
+      if (i < gapY.length - 1) H.wall(tc + 0.2, i % 2 ? 1 : -1, gapY[i + 1], { v: 1700 });
       prevY = gy;
     });
     // 90 - 93: the chase on the bridge (tl_chase.js)
@@ -196,12 +218,12 @@
     // ------------------------------------------------------------ 94 - 95: the ring, then the fill
     // twelve spears gather round the soul through bar 94 (they hover, drawn here), then on
     // 95's fill each one is thrown in as a normal spear from its side
-    const fill = [0, 2, 3, 4, 6, 8, 10, 11, 12, 13, 14, 15];
+    const fill = [...Array(16).keys()]; // every 16th of the fill
     const order = ['u', 'r', 'd', 'l'];
     H.sfx(at(94), 'UndSpearAppear', 0.4);
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 16; i++) {
       const side = order[i % 4], tIn = at(94, 0, i), tHit = at(95, 0, fill[i]), travel = 0.36, tGo = tHit - travel;
-      const ang = H.SIDE_ANG[side] + (Math.floor(i / 4) - 1) * 0.22;
+      const ang = H.SIDE_ANG[side] + (Math.floor(i / 4) - 1.5) * 0.18;
       TL.add({
         t0: tIn, t1: tGo, z: -150,
         draw(ctx, emi, t, S) {
@@ -214,7 +236,7 @@
       H.green(tHit, side, { travel, dist: 140, vol: 0, hitVol: 0.55 });
     }
     const ringFP = [];
-    for (let i = 0; i < 12; i++) { const side = order[i % 4]; ringFP.push({ side, tIn: at(94, 0, i), tGo: at(95, 0, fill[i]) - 0.36, ang: H.SIDE_ANG[side] + (Math.floor(i / 4) - 1) * 0.22 }); }
+    for (let i = 0; i < 16; i++) { const side = order[i % 4]; ringFP.push({ side, tIn: at(94, 0, i), tGo: at(95, 0, fill[i]) - 0.36, ang: H.SIDE_ANG[side] + (Math.floor(i / 4) - 1.5) * 0.18 }); }
     H.firstPerson(at(94) + 0.04, at(95, 3, 2), { ring: ringFP });
     TL.und.to(at(94), at(95), { arm: 1.2, lean: -0.06 }, 'inOut');
     TL.und.to(at(95), at(95, 0, 2), { arm: -0.3, lean: 0.05 }, 'outExpo');
@@ -235,6 +257,7 @@
     H.bossHp(tEnd + 0.15, 0, { dur: 0.5, ease: 'inOut', lagDelay: 0.9 });
     TL.boss.to(tEnd + 1.0, tEnd + 1.3, { lives: 0, posture: 0, pa: 0 }, 'inOut').to(tEnd + 2.2, tEnd + 3.0, { a: 0 }, 'inOut');
     H.shock(tEnd + 0.1, 480, 150, { r: 600, dust: false });
+    H.fracture(tEnd + 0.1, 480, 220, { n: 14, shards: 18, flash: 0, amp: 0, life: 1.2, vol: 0.4 });
     H.speed(tEnd + 0.1, tEnd + 0.9, { k: 1, cy: 200 });
     TL.rumble.set(tEnd + 0.1, { v: 8 }).to(tEnd + 0.1, tEnd + 2.5, { v: 0 }, 'out');
     TL.shadow.to(tEnd + 0.1, tEnd + 2.2, { a: 0, eye: 0 }, 'inOut');

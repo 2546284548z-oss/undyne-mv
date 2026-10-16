@@ -535,6 +535,70 @@
       H.flyer(t, t + far / v, cx + Math.cos(a) * 14, cy + Math.sin(a) * 14, cx + Math.cos(a) * far, cy + Math.sin(a) * far, { len: o.len ?? 56, sfx: false, warn: o.warn ?? 0.32, warnA: 0.18, clip: o.clip });
     }
   };
+  // ================================================================ phase two: the overwhelming
+  // a fracture across the whole picture (screen space): jagged cracks race out from (cx, cy),
+  // a few shards break off and fall, a short flash; it fades within `life`
+  H.fracture = (t, cx = 480, cy = 270, o = {}) => {
+    const n = o.n ?? 9, life = o.life ?? 0.75, rnd = U.rng(Math.floor(t * 977) + 13);
+    const cracks = [];
+    for (let i = 0; i < n; i++) {
+      let a = (i / n) * U.TAU + (rnd() - 0.5) * 0.5, x = cx, y = cy;
+      const pts = [[x, y]], L2 = 180 + rnd() * 360;
+      for (let d = 0; d < L2; ) { const st = 22 + rnd() * 40; a += (rnd() - 0.5) * 0.7; x += Math.cos(a) * st; y += Math.sin(a) * st; d += st; pts.push([x, y]); }
+      cracks.push(pts);
+      if (rnd() < 0.6) { // a branch
+        const j = 1 + Math.floor(rnd() * (pts.length - 2)), [bx, by] = pts[j], b = a + (rnd() < 0.5 ? 1 : -1) * (0.6 + rnd() * 0.5);
+        cracks.push([[bx, by], [bx + Math.cos(b) * 50, by + Math.sin(b) * 50], [bx + Math.cos(b + 0.3) * 100, by + Math.sin(b + 0.3) * 100]]);
+      }
+    }
+    const shards = [];
+    for (let i = 0; i < (o.shards ?? 10); i++) {
+      const a = rnd() * U.TAU, r = 20 + rnd() * 120, s = 8 + rnd() * 18;
+      shards.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, vx: Math.cos(a) * (60 + rnd() * 160), vy: Math.sin(a) * 80 - 120 * rnd(), s, rot: rnd() * 6, vr: (rnd() - 0.5) * 14 });
+    }
+    H.sfx(t, 'UndBreak1', o.vol ?? 0.3);
+    TL.impact(t, { amp: o.amp ?? 12, zoom: 0.05, ca: 8, flash: o.flash ?? 0.3, flashCol: o.flashCol, rot: 0.02, dur: 0.45 });
+    TL.add({
+      t0: t, t1: t + life, z: 88, screen: true,
+      draw(c, emi, tt) {
+        const u = (tt - t) / life, grow = U.eOutExpo(U.clamp((tt - t) / 0.08)), k = 1 - u * u;
+        c.save(); c.lineJoin = 'miter';
+        for (const pts of cracks) {
+          const m = Math.max(2, Math.ceil(pts.length * grow));
+          for (const [w, col, al] of [[7, '#000000', 0.7], [3, '#ffffff', 1]]) {
+            c.globalAlpha = k * al; c.strokeStyle = col; c.lineWidth = w;
+            c.beginPath(); c.moveTo(R(pts[0][0]), R(pts[0][1]));
+            for (let i = 1; i < m && i < pts.length; i++) c.lineTo(R(pts[i][0]), R(pts[i][1]));
+            c.stroke();
+          }
+        }
+        const dt = tt - t;
+        for (const p of shards) {
+          const x = p.x + p.vx * dt, y = p.y + p.vy * dt + 700 * dt * dt, r = p.rot + p.vr * dt;
+          c.globalAlpha = k; c.fillStyle = '#e8f4ff'; c.strokeStyle = '#000000'; c.lineWidth = 2;
+          c.beginPath();
+          for (let j = 0; j < 3; j++) { const a = r + (j * U.TAU) / 3 + (j === 1 ? 0.5 : 0); c.lineTo(R(x + Math.cos(a) * p.s), R(y + Math.sin(a) * p.s * 0.7)); }
+          c.closePath(); c.fill(); c.stroke();
+        }
+        c.restore();
+      },
+    });
+  };
+  // embers: red and gold sparks rising through the whole picture behind her (world, backdrop)
+  H.embers = (t0, t1, o = {}) =>
+    TL.add({
+      t0, t1, z: -400,
+      draw(ctx, emi, t) {
+        const k = Math.min(U.clamp((t - t0) / 0.5), U.clamp((t1 - t) / 0.5)) * (o.k ?? 1);
+        for (let i = 0; i < (o.n ?? 70); i++) {
+          const sp = 60 + U.hash(i * 2.3) * 140, ph = U.hash(i * 7.9) * 900;
+          const y = 640 - ((ph + t * sp) % 820), x = -200 + U.hash(i * 3.1) * 1360 + Math.sin(t * 2 + i) * 14;
+          const col = U.hash(i * 5.5) < 0.7 ? '#ff3a20' : '#ffc040', sz = U.hash(i) < 0.2 ? 4 : 2;
+          D.rect(ctx, x, y, sz, sz, col, k * (0.5 + 0.5 * Math.sin(t * 9 + i)));
+          if (emi && sz > 2) D.rect(emi, x - 4, y - 4, 12, 12, col, k * 0.5);
+        }
+      },
+    });
   // ================================================================ rhythm game: judgement + combo
   // every block is called (GOOD, PERFECT on the accents, PARRY on a deflect) over a combo
   // counter (silent: the calls are visual only, the song carries the rhythm) at the right edge that burns brighter the longer the chain runs; a chain ends when

@@ -180,6 +180,11 @@
           D.rect(ctx, cx - (v[0] ? 8 : w / 2), cy - (v[1] ? 8 : w / 2), v[0] ? 16 : w, v[1] ? 16 : w, col, fade * (0.45 - k * 0.08));
         }
         D.arrow(ctx, emi, kind, p.dir, p.x, p.y, { alpha: fade, scale: H.ARROW });
+        // a volley: flanking spears converge on the same point and hit with it
+        if (o.volley) {
+          const u = U.clamp((t - t0) / travel), off = 34 * (1 - U.eIn(u)) + 6, back = 18 * (1 - u);
+          for (const sg of [-1, 1]) D.arrow(ctx, emi, kind, p.dir, p.x - v[1] * off * sg + v[0] * back, p.y + v[0] * off * sg + v[1] * back, { alpha: fade * 0.9, scale: H.ARROW * 0.85 });
+        }
       },
     });
   };
