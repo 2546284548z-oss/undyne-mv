@@ -180,5 +180,5 @@ node tools/render.cjs                                # 导出成片
 ## 素材来源与许可
 
 - 安黛因精灵表、战斗 UI、音效与原曲 *Battle Against a True Hero* 的版权归 Toby Fox / UNDERTALE 所有；精灵表与部分音效取自 [xFN10x/True-Hero-Simulator](https://github.com/xFN10x/True-Hero-Simulator)，战斗 UI 与其余音效取自 mtt-mv-pub 的打包资源。本项目为非商业同人作品，MIT 不覆盖这些素材。
-- 前置过场的行走图（主角、怪物小孩、穿盔甲的安黛因）取自 [davidcarmonaarrabal/UTDRSpriteWeb](https://github.com/davidcarmonaarrabal/UTDRSpriteWeb)，那里是平滑放大过的版本；`asset/ow/` 里是按原始像素网格还原后的像素图，版权同样归 Toby Fox / UNDERTALE。
+- 前置过场的行走图（主角、怪物小孩、穿盔甲的安黛因）取自 [davidcarmonaarrabal/UTDRSpriteWeb](https://github.com/davidcarmonaarrabal/UTDRSpriteWeb)，那里是平滑放大过的版本；`asset/ow/` 里是按原始像素网格还原后的像素图（主角的侧面图由带脸部涂鸦的那一帧修回正常样子），版权同样归 Toby Fox / UNDERTALE。
 - 引擎、后期、导出与工具改编自 [guiguisocute/mtt-mv-pub](https://github.com/guiguisocute/mtt-mv-pub)（MIT）；本仓库代码同样以 [MIT](LICENSE) 授权。
