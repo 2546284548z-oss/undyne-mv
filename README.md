@@ -4,7 +4,7 @@
 
 **成片下载：[video/undyne_mv_v8_720p60.mp4](video/undyne_mv_v8_720p60.mp4)**（第八版 · 加入前置过场，1280×720 **60fps**，3:13.8，已混入音乐与音效；在 GitHub 页面点 “Download raw file” 下载）
 
-**B 站封面**：[cover/cover_16x9.png](cover/cover_16x9.png)（1920×1080）、[cover/cover_4x3.png](cover/cover_4x3.png)（1440×1080），用 MV 自己的精灵与绘制代码合成（`node tools/cover.cjs cover`）。
+**B 站封面**：[cover/cover_16x9.png](cover/cover_16x9.png)（1920×1080）、[cover/cover_4x3.png](cover/cover_4x3.png)（1440×1080），用 MV 自己的精灵与绘制代码合成（`node tools/cover.cjs cover`，可加 `--tag="..."` 在标题下加一个小标签）。
 
 做法沿用 [guiguisocute/mtt-mv-pub](https://github.com/guiguisocute/mtt-mv-pub)（镁塔顿演出战）：Canvas 像素世界 + WebGL 后期，所有画面都是时间的纯函数，按音乐分析出的拍点编舞；导出时用无头 Chromium 逐帧渲染再用 ffmpeg 编码，不用任何视频模型。
 

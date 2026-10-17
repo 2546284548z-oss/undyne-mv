@@ -1,11 +1,13 @@
 // Bilibili covers (16:9 and 4:3), composed with the MV's own sprites and drawing code:
-//   node tools/cover.cjs [outDir]  ->  cover_16x9.png (1920x1080), cover_4x3.png (1440x1080)
+//   node tools/cover.cjs [outDir] [--tag="..."]  ->  cover_16x9.png (1920x1080), cover_4x3.png (1440x1080)
+// --tag: a small badge under the title (e.g. a remake credit; glyphs it may use: 重置 复刻 制作)
 // One idea: she towers over the frame from below, her giant shadow behind her with the eye
 // burning, and the tiny green soul in the corner, shield up, a few spears closing in.
 const { chromium, pageUrl, SWIFT } = require('./pw.cjs');
 const fs = require('fs'), path = require('path');
 (async () => {
-  const out = path.resolve(process.argv[2] || 'dist');
+  const args = process.argv.slice(2), tag = (args.find((a) => a.startsWith('--tag=')) || '').slice(6);
+  const out = path.resolve(args.find((a) => !a.startsWith('--')) || 'dist');
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ args: SWIFT });
   const page = await browser.newPage({ viewport: { width: 320, height: 180 } });
@@ -15,9 +17,10 @@ const fs = require('fs'), path = require('path');
   await page.waitForFunction(() => window.MV && window.MV.ready, null, { timeout: 60000 });
   const layouts = {
     '16x9': { W: 960, H: 540, ux: 660, uy: 640, usc: 4.2, shx: 660, shy: 900, shsc: 6.2, sx: 210, sy: 446, tx: 34, ty: 58, ts: 5, sub: 2 },
-    '4x3': { W: 720, H: 540, ux: 535, uy: 640, usc: 3.95, shx: 535, shy: 900, shsc: 6.2, sx: 140, sy: 466, arrows: [['blue', 'l', 88, 0], ['blue', 'r', -62, 0, 0.85]], subText: '真正的英雄·像素演出战', tx: 26, ty: 52, ts: 4, sub: 2 },
+    '4x3': { W: 720, H: 540, ux: 535, uy: 640, usc: 3.95, shx: 535, shy: 900, shsc: 6.2, sx: 140, sy: 466, arrows: [['blue', 'l', 88, 0], ['blue', 'r', -62, 0, 0.85]], tx: 26, ty: 52, ts: 4, sub: 2 },
   };
   for (const [name, L] of Object.entries(layouts)) {
+    L.tag = tag;
     const url = await page.evaluate((L) => {
       const MV = window.MV, D = MV.D, U = MV.U, K = 2; // logical px -> output px
       const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; };
@@ -90,7 +93,12 @@ const fs = require('fs'), path = require('path');
       f.setTransform(K, 0, 0, K, 0, 0); f.imageSmoothingEnabled = false;
       D.text(f, '不死的安黛因', L.tx, L.ty, { scale: L.ts, color: '#ffffff', outline: '#c00018' });
       D.text(f, 'UNDYNE THE UNDYING', L.tx + 4, L.ty + 16 * L.ts + 10, { scale: L.sub, color: '#ff5a5a', spacing: 2 });
-      D.text(f, L.subText || '真正的英雄 · 像素演出战', L.tx + 4, L.ty + 16 * L.ts + 10 + 16 * L.sub + 8, { scale: L.sub, color: '#9fe8ff' });
+      if (L.tag) { // a small badge: white on a dark plate, a thin red frame
+        const x = L.tx + 4, y = L.ty + 16 * L.ts + 10 + 16 * L.sub + 12, tw = D.textWidth(L.tag, { scale: L.sub });
+        D.rect(f, x - 2, y - 6, tw + 20, 16 * L.sub + 10, '#000000', 0.7);
+        D.frame(f, x - 2, y - 6, tw + 20, 16 * L.sub + 10, 2, '#ff3a3a', 1);
+        D.text(f, L.tag, x + 8, y - 1, { scale: L.sub, color: '#ffffff' });
+      }
       return fc.toDataURL('image/png');
     }, L);
     const file = path.join(out, `cover_${name}.png`);
