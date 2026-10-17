@@ -22,7 +22,7 @@ glyphs = json.loads(src[a:b])
 
 # every non-ASCII character used anywhere in src/ (the same scan as make_font.py)
 used = ''
-for f in glob.glob('src/*.js'):
+for f in glob.glob('src/*.js') + ['tools/cover.cjs']:
     if f.replace('\\', '/').endswith(('glyphs.js', 'assets.js', 'analysis.js')):
         continue
     used += ''.join(re.findall(r'[^\x00-\x7f]', open(f, encoding='utf-8').read()))
