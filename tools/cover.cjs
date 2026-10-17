@@ -17,8 +17,10 @@ const fs = require('fs'), path = require('path');
   await page.goto(pageUrl('?render=1&w=320&h=180'));
   await page.waitForFunction(() => window.MV && window.MV.ready, null, { timeout: 60000 });
   const layouts = {
-    '16x9': { W: 960, H: 540, ux: 705, uy: 668, usc: 4.6, sx: 232, sy: 338, tx: 34, ty: 58, ts: 5, sub: 2 },
-    '4x3': { W: 720, H: 540, ux: 578, uy: 662, usc: 4.3, sx: 150, sy: 334, tx: 26, ty: 52, ts: 4, sub: 2 },
+    // t1 / t2: the two title lines' scales ("不死的" over a big "安黛因"); the mobile feed crops a
+    // little off each side, so the title sits in from the edge
+    '16x9': { W: 960, H: 540, ux: 628, uy: 668, usc: 4.6, sx: 150, sy: 372, tx: 62, ty: 40, t1: 6, t2: 8, sub: 2 },
+    '4x3': { W: 720, H: 540, ux: 492, uy: 662, usc: 4.3, sx: 112, sy: 318, tx: 34, ty: 36, t1: 5, t2: 6, sub: 2 },
   };
   for (const [name, L] of Object.entries(layouts)) {
     L.tag = tag;
@@ -96,10 +98,23 @@ const fs = require('fs'), path = require('path');
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.72)');
       f.fillStyle = vg; f.fillRect(0, 0, L.W * K, L.H * K);
       // the title, top left (the duration badge sits bottom right on the site)
-      f.setTransform(K, 0, 0, K, 0, 0); f.imageSmoothingEnabled = false;
-      D.text(f, '不死的安黛因', L.tx, L.ty, { scale: L.ts, color: '#ffffff', outline: '#c00018' });
+      // two lines, leaning forward: a red "不死的" with a slash of red running off it, then a big
+      // white "安黛因" in a thick red outline over a dark red drop shadow, strokes thickened
+      f.imageSmoothingEnabled = false;
+      const lean = 0.14, sk = (y) => f.setTransform(K, 0, -lean * K, K, lean * K * y, 0); // skew about line y
+      const y1 = L.ty, y2 = L.ty + 16 * L.t1 + 12, h2 = 16 * L.t2;
+      sk(y1 + 8 * L.t1);
+      for (let k = 3; k >= 0; k--) D.text(f, '不死的', L.tx + k, y1, { scale: L.t1, color: '#ff3448', outline: '#000000' });
+      const w1 = D.textWidth('不死的', { scale: L.t1 });
+      D.rect(f, L.tx + w1 + 14, y1 + 8 * L.t1 - 3, 22 * L.t2, 6, '#ff3448', 1);
+      D.rect(f, L.tx + w1 + 14 + 22 * L.t2 + 8, y1 + 8 * L.t1 - 3, 6 * L.t2, 6, '#ff3448', 0.6);
+      sk(y2 + h2 / 2);
+      const bold = Math.max(1, Math.round(L.t2 / 3));
+      D.text(f, '安黛因', L.tx + L.t2, y2 + L.t2, { scale: L.t2, color: '#4a000c', outline: '#4a000c' }); // drop shadow
+      for (let k = bold; k >= 0; k--) D.text(f, '安黛因', L.tx + k, y2, { scale: L.t2, color: '#ffffff', outline: '#d0101e' });
+      f.setTransform(K, 0, 0, K, 0, 0);
       if (L.tag) { // a small badge: white on a dark plate, a thin red frame
-        const x = L.tx + 4, y = L.ty + 16 * L.ts + 18, tw = D.textWidth(L.tag, { scale: L.sub });
+        const x = L.tx + 4, y = L.ty + 16 * L.t1 + 12 + 16 * L.t2 + 22, tw = D.textWidth(L.tag, { scale: L.sub });
         D.rect(f, x - 2, y - 6, tw + 20, 16 * L.sub + 10, '#000000', 0.7);
         D.frame(f, x - 2, y - 6, tw + 20, 16 * L.sub + 10, 2, '#ff3a3a', 1);
         D.text(f, L.tag, x + 8, y - 1, { scale: L.sub, color: '#ffffff' });
